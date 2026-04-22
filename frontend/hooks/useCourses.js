@@ -35,11 +35,11 @@ export const useSearchCourses = (filters) => {
     queryFn: async () => {
       const params = new URLSearchParams();
       if (filters.keyword) params.append("keyword", filters.keyword);
-      if (filters.program) params.append("program", filters.program);
-      if (filters.semester) params.append("semester", filters.semester);
+      if (filters.program && filters.program !== "all") params.append("program", filters.program);
+      if (filters.semester && filters.semester !== "all") params.append("semester", filters.semester);
       if (filters.minDifficulty) params.append("minDifficulty", filters.minDifficulty);
       if (filters.maxDifficulty) params.append("maxDifficulty", filters.maxDifficulty);
-      if (filters.credits) params.append("credits", filters.credits);
+      if (filters.credits && filters.credits !== "all") params.append("credits", filters.credits);
 
       const { data } = await axios.get(`/courses/search?${params.toString()}`);
       return data;

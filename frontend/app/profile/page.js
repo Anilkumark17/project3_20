@@ -97,29 +97,40 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="mx-auto max-w-5xl p-6">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold tracking-tight text-black">
-            Student Profile
-          </h1>
-          <p className="mt-2 text-lg font-light text-black/60">
-            Manage your academic information and track your progress
-          </p>
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        {/* Header Section */}
+        <div className="mb-10">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-5xl font-bold tracking-tight text-black">
+                My Profile
+              </h1>
+              <p className="mt-3 text-lg font-light text-black/60">
+                Manage your academic journey and track your progress
+              </p>
+            </div>
+            {profile && (
+              <Badge className="h-10 gap-2 border-black/20 bg-black/5 px-4 text-sm font-semibold text-black">
+                <CheckCircle2 className="h-4 w-4" />
+                Profile Active
+              </Badge>
+            )}
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Profile Information Card */}
-          <Card className="border-black/10 lg:col-span-2">
-            <CardHeader>
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+          {/* Main Profile Card */}
+          <Card className="shadow-xl border-black/5 bg-white lg:col-span-8">
+            <CardHeader className="border-b border-black/5 bg-gradient-to-r from-black to-gray-800 pb-8">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-black p-2.5">
-                    <GraduationCap className="h-5 w-5 text-white" />
+                <div className="flex items-center gap-4">
+                  <div className="rounded-2xl bg-white/10 p-4 backdrop-blur-sm">
+                    <GraduationCap className="h-8 w-8 text-white" />
                   </div>
                   <div>
-                    <CardTitle className="font-semibold text-black">Academic Profile</CardTitle>
-                    <CardDescription className="font-light text-black/60">
-                      Your program and academic goals
+                    <CardTitle className="text-2xl font-bold text-white">Academic Information</CardTitle>
+                    <CardDescription className="mt-1 font-light text-white/80">
+                      Your program, semester, and academic goals
                     </CardDescription>
                   </div>
                 </div>
@@ -136,8 +147,7 @@ export default function ProfilePage() {
                       }
                       setIsEditing(true);
                     }}
-                    variant="outline"
-                    className="border-black/20 font-medium hover:bg-black/5"
+                    className="bg-white font-semibold text-black hover:bg-white/90"
                   >
                     Edit Profile
                   </Button>
@@ -145,18 +155,18 @@ export default function ProfilePage() {
               </div>
             </CardHeader>
 
-            <CardContent>
+            <CardContent className="p-8">
               {isEditing ? (
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="program" className="text-base font-medium text-black">
-                      Program
+                <form onSubmit={handleSubmit} className="space-y-8">
+                  <div className="space-y-3">
+                    <Label htmlFor="program" className="text-sm font-semibold uppercase tracking-wide text-black/70">
+                      Academic Program
                     </Label>
                     <Select
                       value={formData.program}
                       onValueChange={(value) => setFormData({ ...formData, program: value })}
                     >
-                      <SelectTrigger id="program" className="h-12 border-black/20 font-medium">
+                      <SelectTrigger id="program" className="h-14 border-2 border-black/10 font-medium shadow-sm transition-all hover:border-black/30 focus:border-black">
                         <SelectValue placeholder="Select your program" />
                       </SelectTrigger>
                       <SelectContent>
@@ -169,15 +179,15 @@ export default function ProfilePage() {
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="semester" className="text-base font-medium text-black">
+                  <div className="space-y-3">
+                    <Label htmlFor="semester" className="text-sm font-semibold uppercase tracking-wide text-black/70">
                       Current Semester
                     </Label>
                     <Select
                       value={formData.semester}
                       onValueChange={(value) => setFormData({ ...formData, semester: value })}
                     >
-                      <SelectTrigger id="semester" className="h-12 border-black/20 font-medium">
+                      <SelectTrigger id="semester" className="h-14 border-2 border-black/10 font-medium shadow-sm transition-all hover:border-black/30 focus:border-black">
                         <SelectValue placeholder="Select your semester" />
                       </SelectTrigger>
                       <SelectContent>
@@ -190,15 +200,15 @@ export default function ProfilePage() {
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="goal" className="text-base font-medium text-black">
+                  <div className="space-y-3">
+                    <Label htmlFor="goal" className="text-sm font-semibold uppercase tracking-wide text-black/70">
                       Academic Goal
                     </Label>
                     <Select
                       value={formData.goal}
                       onValueChange={(value) => setFormData({ ...formData, goal: value })}
                     >
-                      <SelectTrigger id="goal" className="h-12 border-black/20 font-medium">
+                      <SelectTrigger id="goal" className="h-14 border-2 border-black/10 font-medium shadow-sm transition-all hover:border-black/30 focus:border-black">
                         <SelectValue placeholder="Select your goal" />
                       </SelectTrigger>
                       <SelectContent>
@@ -211,11 +221,11 @@ export default function ProfilePage() {
                     </Select>
                   </div>
 
-                  <div className="flex gap-3">
+                  <div className="flex gap-4 pt-4">
                     <Button
                       type="submit"
                       disabled={updateProfileMutation.isPending}
-                      className="flex-1 bg-black font-medium text-white hover:bg-black/90"
+                      className="flex-1 h-12 bg-black font-semibold text-white shadow-lg hover:bg-black/90 hover:shadow-xl transition-all"
                     >
                       {updateProfileMutation.isPending ? (
                         <>
@@ -230,17 +240,17 @@ export default function ProfilePage() {
                       type="button"
                       onClick={handleCancel}
                       variant="outline"
-                      className="flex-1 border-black/20 font-medium hover:bg-black/5"
+                      className="flex-1 h-12 border-2 border-black/20 font-semibold hover:bg-black/5 transition-all"
                     >
                       Cancel
                     </Button>
                   </div>
                 </form>
               ) : (
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm font-medium text-black/50">Program</p>
-                    <p className="text-lg font-semibold text-black">
+                <div className="space-y-6">
+                  <div className="rounded-lg border border-black/10 bg-gray-50 p-6">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-black/50">Program</p>
+                    <p className="mt-2 text-2xl font-bold text-black">
                       {profile?.program ? (
                         PROGRAMS.find((p) => p.value === profile.program)?.label
                       ) : (
@@ -248,9 +258,9 @@ export default function ProfilePage() {
                       )}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-black/50">Current Semester</p>
-                    <p className="text-lg font-semibold text-black">
+                  <div className="rounded-lg border border-black/10 bg-gray-50 p-6">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-black/50">Current Semester</p>
+                    <p className="mt-2 text-2xl font-bold text-black">
                       {profile?.semester ? (
                         `Semester ${profile.semester}`
                       ) : (
@@ -258,9 +268,9 @@ export default function ProfilePage() {
                       )}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-black/50">Academic Goal</p>
-                    <p className="text-lg font-semibold text-black">
+                  <div className="rounded-lg border border-black/10 bg-gray-50 p-6">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-black/50">Academic Goal</p>
+                    <p className="mt-2 text-2xl font-bold text-black">
                       {profile?.goal ? (
                         GOALS.find((g) => g.value === profile.goal)?.label
                       ) : (
@@ -273,69 +283,99 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
-          {/* Stats Card */}
-          <Card className="border-black/10">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-black p-2.5">
-                  <BookOpen className="h-5 w-5 text-white" />
+          {/* Stats Sidebar */}
+          <div className="space-y-6 lg:col-span-4">
+            <Card className="shadow-xl border-black/10 bg-white">
+              <CardHeader className="border-b border-black/10 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-xl bg-black p-3">
+                    <BookOpen className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-lg font-bold text-black">Academic Progress</CardTitle>
+                    <CardDescription className="text-sm font-light text-black/60">
+                      Your journey so far
+                    </CardDescription>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle className="font-semibold text-black">Progress</CardTitle>
-                  <CardDescription className="font-light text-black/60">
-                    Your statistics
-                  </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6 pt-6">
+                <div className="rounded-xl border-2 border-black/10 bg-gray-50 p-6">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-black/50">Credits Earned</p>
+                    <Badge className="bg-black text-white border-black">Total</Badge>
+                  </div>
+                  <p className="mt-3 text-5xl font-black text-black">
+                    {profile?.creditsCompleted || 0}
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-black/50">credits completed</p>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <p className="text-sm font-medium text-black/50">Credits Completed</p>
-                <p className="text-3xl font-bold text-black">
-                  {profile?.creditsCompleted || 0}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-black/50">Courses Completed</p>
-                <p className="text-3xl font-bold text-black">0</p>
-              </div>
-              {dbUser && (
-                <Badge variant="outline" className="gap-1.5 border-black/20 bg-black/5 font-medium text-black">
-                  <CheckCircle2 className="h-3 w-3" />
-                  Profile Active
-                </Badge>
-              )}
-            </CardContent>
-          </Card>
+                <div className="rounded-xl border-2 border-black/10 bg-gray-50 p-6">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-black/50">Courses Done</p>
+                    <Badge className="bg-black/90 text-white border-black">Count</Badge>
+                  </div>
+                  <p className="mt-3 text-5xl font-black text-black">0</p>
+                  <p className="mt-1 text-sm font-medium text-black/50">courses finished</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Quick Info Card */}
+            <Card className="shadow-lg border-black/10 bg-white">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="rounded-lg bg-black/10 p-3">
+                    <Target className="h-5 w-5 text-black" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-black">Next Steps</h3>
+                    <p className="mt-1 text-sm text-black/60">
+                      Add your completed courses to get personalized recommendations
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         {/* Completed Courses Section */}
-        <Card className="mt-6 border-black/10">
-          <CardHeader>
+        <Card className="mt-8 shadow-xl border-black/10 bg-white">
+          <CardHeader className="border-b border-black/10 bg-black pb-8">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-black p-2.5">
-                  <Target className="h-5 w-5 text-white" />
+              <div className="flex items-center gap-4">
+                <div className="rounded-2xl bg-white/10 p-4">
+                  <Target className="h-8 w-8 text-white" />
                 </div>
                 <div>
-                  <CardTitle className="font-semibold text-black">Completed Courses</CardTitle>
-                  <CardDescription className="font-light text-black/60">
-                    Track courses you&apos;ve finished
+                  <CardTitle className="text-2xl font-bold text-white">Completed Courses</CardTitle>
+                  <CardDescription className="mt-1 font-light text-white/80">
+                    Track your academic achievements
                   </CardDescription>
                 </div>
               </div>
-              <Button className="bg-black font-medium text-white hover:bg-black/90">
+              <Button className="bg-white font-semibold text-black shadow-lg hover:bg-gray-100 transition-all">
+                <BookOpen className="mr-2 h-4 w-4" />
                 Add Course
               </Button>
             </div>
           </CardHeader>
-          <CardContent>
-            <Alert className="border-black/10 bg-black/5">
-              <AlertCircle className="h-4 w-4 text-black" />
-              <AlertDescription className="font-light text-black">
-                No completed courses added yet. Start by adding courses you&apos;ve already completed to get personalized recommendations.
-              </AlertDescription>
-            </Alert>
+          <CardContent className="p-8">
+            <div className="rounded-xl border-2 border-dashed border-black/20 bg-gray-50 p-12 text-center">
+              <div className="mx-auto w-fit rounded-full bg-black/10 p-6">
+                <AlertCircle className="h-12 w-12 text-black" />
+              </div>
+              <h3 className="mt-6 text-xl font-bold text-black">No Courses Added Yet</h3>
+              <p className="mt-2 text-base text-black/60">
+                Start building your academic profile by adding courses you&apos;ve completed.
+                This helps us provide better recommendations tailored to your progress.
+              </p>
+              <Button className="mt-6 bg-black font-semibold text-white hover:bg-black/90">
+                <BookOpen className="mr-2 h-4 w-4" />
+                Add Your First Course
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>

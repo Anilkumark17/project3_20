@@ -32,14 +32,14 @@ export function useProfile(clerkId) {
   });
 }
 
-export function useUpdateProfile(clerkId) {
+export function useUpdateProfile() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (profileData) => authService.updateProfile(clerkId, profileData),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["profile", clerkId] });
-      queryClient.invalidateQueries({ queryKey: ["user", clerkId] });
+    mutationFn: ({ clerkId, profileData }) => authService.updateProfile(clerkId, profileData),
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["profile", variables.clerkId] });
+      queryClient.invalidateQueries({ queryKey: ["user", variables.clerkId] });
     },
   });
 }

@@ -12,7 +12,7 @@ import { useSearchCourses } from "@/hooks/useCourses";
 import { Loader2, Search, BookOpen, Filter, X } from "lucide-react";
 
 const PROGRAMS = [
-  { value: "", label: "All Programs" },
+  { value: "all", label: "All Programs" },
   { value: "CSE", label: "CSE" },
   { value: "PDM", label: "PDM" },
   { value: "CSIS", label: "CSIS" },
@@ -20,7 +20,7 @@ const PROGRAMS = [
 ];
 
 const SEMESTERS = [
-  { value: "", label: "All Semesters" },
+  { value: "all", label: "All Semesters" },
   ...Array.from({ length: 8 }, (_, i) => ({
     value: (i + 1).toString(),
     label: `Semester ${i + 1}`,
@@ -28,7 +28,7 @@ const SEMESTERS = [
 ];
 
 const CREDITS = [
-  { value: "", label: "All Credits" },
+  { value: "all", label: "All Credits" },
   { value: "1", label: "1 Credit" },
   { value: "2", label: "2 Credits" },
   { value: "3", label: "3 Credits" },
@@ -43,9 +43,9 @@ export default function CoursesPage() {
 
   const [filters, setFilters] = useState({
     keyword: "",
-    program: "",
-    semester: "",
-    credits: "",
+    program: "all",
+    semester: "all",
+    credits: "all",
   });
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -77,13 +77,13 @@ export default function CoursesPage() {
     setSearchTerm("");
     setFilters({
       keyword: "",
-      program: "",
-      semester: "",
-      credits: "",
+      program: "all",
+      semester: "all",
+      credits: "all",
     });
   };
 
-  const hasActiveFilters = filters.keyword || filters.program || filters.semester || filters.credits;
+  const hasActiveFilters = filters.keyword || (filters.program && filters.program !== "all") || (filters.semester && filters.semester !== "all") || (filters.credits && filters.credits !== "all");
 
   if (!isLoaded || isLoading) {
     return (
