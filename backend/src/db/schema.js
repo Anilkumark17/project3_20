@@ -1,4 +1,4 @@
-const { pgTable, serial, text, integer, timestamp } = require("drizzle-orm/pg-core");
+const { pgTable, serial, text, integer, timestamp, json } = require("drizzle-orm/pg-core");
 
 const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -61,6 +61,31 @@ const recommendations = pgTable("recommendations", {
   generatedAt: timestamp("generated_at").defaultNow(),
 });
 
+const documents = pgTable("documents", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description"),
+  semester: text("semester").notNull(),
+  pageNum: integer("page_num"),
+  vectorCount: integer("vector_count").default(0),
+  namespace: text("namespace").notNull().unique(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+const courseChunks = pgTable("course_chunks", {
+  id: serial("id").primaryKey(),
+  documentId: integer("document_id").references(() => documents.id).notNull(),
+  vectorId: text("vector_id").notNull().unique(),
+  courseCode: text("course_code"),
+  courseTitle: text("course_title").notNull(),
+  content: text("content").notNull(),
+  pageNumber: integer("page_number"),
+  chunkIndex: integer("chunk_index"),
+  metadata: json("metadata"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 module.exports = {
   users,
   profiles,
@@ -68,4 +93,6 @@ module.exports = {
   completedCourses,
   ratings,
   recommendations,
+  documents,
+  courseChunks,
 };

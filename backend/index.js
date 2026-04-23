@@ -2,9 +2,12 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 
-const authRoutes = require("./src/routes/authRoutes");
-const profileRoutes = require("./src/routes/profileRoutes");
-const courseRoutes = require("./src/routes/courseRoutes");
+const authRoutes = require("./src/services/auth/routes");
+const profileRoutes = require("./src/services/profile/routes");
+const courseRoutes = require("./src/services/courses/routes");
+const dashboardRoutes = require("./src/services/dashboard/routes");
+const recommendationRoutes = require("./src/services/recommendations/routes");
+const ragRoutes = require("./src/services/rag/routes");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -21,6 +24,9 @@ app.get("/", (req, res) => {
       auth: "/api/auth",
       profile: "/api/profile",
       courses: "/api/courses",
+      dashboard: "/api/dashboard",
+      recommendations: "/api/recommendations",
+      rag: "/api/rag",
     }
   });
 });
@@ -28,6 +34,9 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/courses", courseRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/recommendations", recommendationRoutes);
+app.use("/api/rag", ragRoutes);
 
 app.use((err, req, res, next) => {
   console.error("Error:", err);
