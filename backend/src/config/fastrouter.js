@@ -1,93 +1,51 @@
-const axios = require('axios');
+const OpenAI = require("openai");
 
 class FastRouterClient {
   constructor() {
-    this.apiKey = process.env.FASTROUTER_API_KEY;
-    this.baseUrl = process.env.FASTROUTER_URL || 'https://go.fastrouter.ai/api/v1/chat/completions';
-    this.model = process.env.FASTROUTER_MODEL || 'google/gemini-2.5-pro';
-    
-    if (!this.apiKey) {
-      throw new Error('FASTROUTER_API_KEY is required');
+    if (!process.env.FASTROUTER_API_KEY) {
+      throw new Error("FASTROUTER_API_KEY is required");
     }
+    this.model = process.env.FASTROUTER_MODEL || "anthropic/claude-haiku-4-5";
+    this.client = new OpenAI({
+      baseURL: process.env.FASTROUTER_URL || "https://go.fastrouter.ai/api/v1",
+      apiKey: process.env.FASTROUTER_API_KEY,
+    });
   }
-  
 
   async chat(messages, options = {}) {
-    try {
-      const response = await axios.post(
-        this.baseUrl,
-        {
-          model: this.model,
-          messages,
-          temperature: options.temperature || 0.7,
-          max_tokens: options.maxTokens || 2000,
-          ...options
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Content-Type': 'application/json'
-          },
-          timeout: 30000
-        }
-      );
-
-      return response.data.choices[0].message.content;
-    } catch (error) {
-      console.error('FastRouter API Error:', error.response?.data || error.message);
-      throw new Error(`FastRouter request failed: ${error.message}`);
-    }
+    const response = await this.client.chat.completions.create({
+      model: this.model,
+      messages,
+      temperature: options.temperature ?? 0.7,
+      max_tokens: options.maxTokens || 2000,
+    });
+    return response.choices[0].message.content;
   }
 
   async rerankAndExplain(userQuery, retrievedCourses, userContext) {
     const prompt = this.buildRerankingPrompt(userQuery, retrievedCourses, userContext);
-    
-    const messages = [
-      {
-        role: 'system',
-        content: 'You are an expert academic advisor specializing in course recommendations. Analyze courses and provide personalized, actionable recommendations with clear reasoning.'
-      },
-      {
-        role: 'user',
-        content: prompt
-      }
-    ];
-
-    const response = await this.chat(messages, { temperature: 0.3 });
+    const response = await this.chat(
+      [{ role: "user", content: prompt }],
+      { temperature: 0.3 }
+    );
     return this.parseRecommendations(response);
   }
 
   buildRerankingPrompt(userQuery, courses, context) {
-    return `
+    return `You are an expert academic advisor. Return ONLY valid JSON, no markdown.
+
 USER PROFILE:
-- Goal: ${context.goal || 'Not specified'}
-- Current Program: ${context.currentProgram || 'Not specified'}
-- Completed Courses: ${context.completedCourses?.join(', ') || 'None'}
-- Interests: ${context.interests?.join(', ') || 'Not specified'}
+- Program: ${context.currentProgram || "Not specified"}
+- Goal: ${context.goal || "Not specified"}
+- Completed Courses: ${context.completedCourses?.join(", ") || "None"}
 - Season: ${context.season}
 
 USER QUERY: ${userQuery}
 
-RETRIEVED COURSES (from semantic search):
-${courses.map((c, i) => `
-${i + 1}. ${c.title} (${c.code})
-   Credits: ${c.credits}
-   Difficulty: ${c.difficulty}/5
-   Description: ${c.description}
-   Program: ${c.program}
-   Similarity Score: ${c.score?.toFixed(3)}
-`).join('\n')}
+COURSES TO RANK:
+${courses.map((c, i) => `${i + 1}. ${c.title} (${c.code}) — ${c.credits} credits, difficulty ${c.difficulty}/5 — ${c.description}`).join("\n")}
 
-TASK:
-1. Rerank these courses based on user's goal, interests, and background
-2. Select TOP 5 most relevant courses
-3. For each course, provide:
-   - Why it matches their goals
-   - How it builds on their completed courses
-   - Specific learning outcomes relevant to their interests
-   - Match score (0-1)
-
-OUTPUT FORMAT (strict JSON):
+Select the TOP 5 most relevant courses and return this exact JSON:
 {
   "recommendations": [
     {
@@ -95,27 +53,19 @@ OUTPUT FORMAT (strict JSON):
       "code": "CS1.234",
       "credits": 4,
       "difficulty": 3,
-      "reason": "Detailed explanation of why this course is recommended",
-      "matchScore": 0.95,
-      "keyOutcomes": ["outcome1", "outcome2"],
-      "prerequisiteAlignment": "How this builds on completed courses"
+      "reason": "Why this course fits the student's goals"
     }
   ]
-}
-
-Return ONLY valid JSON, no markdown formatting.
-`;
+}`;
   }
 
   parseRecommendations(response) {
     try {
       const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No JSON found in response');
-      }
+      if (!jsonMatch) throw new Error("No JSON found in response");
       return JSON.parse(jsonMatch[0]);
     } catch (error) {
-      console.error('Failed to parse FastRouter response:', error);
+      console.error("Failed to parse FastRouter response:", error);
       return { recommendations: [] };
     }
   }
