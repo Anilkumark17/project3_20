@@ -5,7 +5,7 @@ export const useRecommendations = (clerkId) => {
   return useQuery({
     queryKey: ["recommendations", clerkId],
     queryFn: async () => {
-      const { data } = await axios.get(`/recommendations/${clerkId}`);
+      const { data } = await axios.get(`/recommendations/${clerkId}`, { timeout: 60000 });
       return data;
     },
     enabled: !!clerkId,
@@ -18,7 +18,7 @@ export const useRefreshRecommendations = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (clerkId) => {
-      const { data } = await axios.post(`/recommendations/${clerkId}/refresh`);
+      const { data } = await axios.post(`/recommendations/${clerkId}/refresh`, {}, { timeout: 60000 });
       return data;
     },
     onSuccess: (_, clerkId) => {

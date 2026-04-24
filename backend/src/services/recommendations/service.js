@@ -7,25 +7,26 @@ const recommendationRepository = require("./repository");
 
 const getRecommendations = async (clerkId, { forceRefresh = false } = {}) => {
   const user = await userRepository.findByClerkId(clerkId);
-  if (!user) throw new Error("User not found");
+  if (!user) return { recommendations: [], generatedAt: null };
 
   const profile = await profileRepository.findByUserId(user.id);
   const completedCourses = await completedCoursesRepository.findByUserId(user.id);
   const completedIds = new Set(completedCourses.map((c) => c.courseId));
   const completedCodes = completedCourses.map((c) => c.courseCode);
 
+  // GET: always serve from DB cache only, never call FastRouter
   if (!forceRefresh) {
     const cached = await recommendationRepository.findByUserId(user.id);
-    if (cached.length > 0) return { recommendations: cached, generatedAt: cached[0].generatedAt };
+    return { recommendations: cached, generatedAt: cached[0]?.generatedAt || null };
   }
 
-  // Build candidate pool: program-matched courses, excluding already completed
+  // POST /refresh: call FastRouter to generate new recommendations
   const candidates = (profile?.program ? courseCache.getByProgram(profile.program) : courseCache.getAll())
     .filter((c) => !completedIds.has(c.id))
-    .slice(0, 15)
+    .slice(0, 8)
     .map((c) => ({ ...c, score: 1.0 }));
 
-  if (!candidates.length) return { recommendations: [], generatedAt: new Date() };
+  if (!candidates.length) return { recommendations: [], generatedAt: null };
 
   const season = profile?.semester === 1 ? "monsoon" : profile?.semester === 2 ? "spring" : "any";
   const userContext = {
