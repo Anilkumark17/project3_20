@@ -1,4 +1,4 @@
-const { pgTable, serial, text, integer, timestamp, json } = require("drizzle-orm/pg-core");
+const { pgTable, serial, text, integer, timestamp, json, index } = require("drizzle-orm/pg-core");
 
 const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -18,7 +18,9 @@ const profiles = pgTable("profiles", {
   creditsCompleted: integer("credits_completed").default(0),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (t) => [
+  index("profiles_user_id_idx").on(t.userId),
+]);
 
 const courses = pgTable("courses", {
   id: serial("id").primaryKey(),
@@ -30,7 +32,12 @@ const courses = pgTable("courses", {
   program: text("program"),
   semester: integer("semester"),
   createdAt: timestamp("created_at").defaultNow(),
-});
+}, (t) => [
+  index("courses_program_idx").on(t.program),
+  index("courses_semester_idx").on(t.semester),
+  index("courses_difficulty_idx").on(t.difficulty),
+  index("courses_credits_idx").on(t.credits),
+]);
 
 const completedCourses = pgTable("completed_courses", {
   id: serial("id").primaryKey(),
@@ -38,7 +45,9 @@ const completedCourses = pgTable("completed_courses", {
   courseId: integer("course_id").references(() => courses.id).notNull(),
   grade: text("grade"),
   completedAt: timestamp("completed_at").defaultNow(),
-});
+}, (t) => [
+  index("completed_courses_user_course_idx").on(t.userId, t.courseId),
+]);
 
 const ratings = pgTable("ratings", {
   id: serial("id").primaryKey(),
