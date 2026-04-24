@@ -1,86 +1,71 @@
-const service = require("./service");
+const ragService = require("./service");
 
+/**
+ * RAG Controller – HTTP interface for the Graph RAG
+ */
 class RAGController {
-  async getDocuments(req, res) {
+  /**
+   * POST /api/rag/ask
+   * Body: { question: string, history?: Array }
+   */
+  async ask(req, res) {
     try {
-      const { semester } = req.query;
+      const { question, history } = req.body;
 
-      const documents = semester
-        ? await service.getDocumentsBySemester(semester)
-        : await service.getAllDocuments();
-
-      res.json({
-        success: true,
-        data: documents,
-      });
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: error.message,
-      });
-    }
-  }
-
-  async getDocumentWithChunks(req, res) {
-    try {
-      const { namespace } = req.params;
-
-      const document = await service.getDocumentWithChunks(namespace);
-
-      res.json({
-        success: true,
-        data: document,
-      });
-    } catch (error) {
-      const statusCode = error.message === "Document not found" ? 404 : 500;
-      res.status(statusCode).json({
-        success: false,
-        error: error.message,
-      });
-    }
-  }
-
-  async searchCourses(req, res) {
-    try {
-      const { semester } = req.params;
-      const { q, topK = 10 } = req.query;
-
-      if (!q) {
+      if (!question || !question.trim()) {
         return res.status(400).json({
           success: false,
-          error: "Search query is required",
+          error: "A question is required.",
         });
       }
 
-      const results = await service.searchCourses(semester, q, parseInt(topK));
-
-      res.json({
+      const result = await ragService.ask(question.trim(), history || []);
+      
+      return res.json({
         success: true,
-        data: results,
+        data: result,
       });
     } catch (error) {
-      res.status(500).json({
+      console.error("RAG Ask Error:", error);
+      return res.status(500).json({
         success: false,
-        error: error.message,
+        error: error.message || "An error occurred while processing your request.",
       });
     }
   }
 
-  async deleteDocument(req, res) {
+  /**
+   * POST /api/rag/ask/stream
+   */
+  async askStream(req, res) {
     try {
-      const { namespace } = req.params;
+      const { question, history } = req.body;
 
-      await service.deleteDocument(namespace);
+      if (!question || !question.trim()) {
+        return res.status(400).send("A question is required.");
+      }
 
-      res.json({
-        success: true,
-        message: "Document deleted successfully",
-      });
+      // SSE setup
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.flushHeaders();
+
+      const stream = await ragService.askStream(question.trim(), history || []);
+
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content ?? "";
+        if (content) {
+          res.write(`data: ${JSON.stringify({ content })}\n\n`);
+        }
+      }
+
+      res.write("data: [DONE]\n\n");
+      res.end();
     } catch (error) {
-      res.status(500).json({
-        success: false,
-        error: error.message,
-      });
+      console.error("RAG Stream Error:", error);
+      res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+      res.end();
     }
   }
 }

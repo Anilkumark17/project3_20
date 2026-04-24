@@ -26,7 +26,6 @@ const courses = pgTable("courses", {
   title: text("title").notNull(),
   credits: integer("credits").notNull(),
   difficulty: integer("difficulty"),
-  workload: text("workload"),
   description: text("description"),
   program: text("program"),
   semester: integer("semester"),

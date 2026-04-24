@@ -41,15 +41,13 @@ export default function CoursesPage() {
   const { isLoaded, isSignedIn } = useUser();
   const router = useRouter();
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedKeyword, setDebouncedKeyword] = useState("");
   const [filters, setFilters] = useState({
-    keyword: "",
     program: "all",
     semester: "all",
     credits: "all",
   });
-
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedKeyword, setDebouncedKeyword] = useState("");
 
   // Debounce search input
   useEffect(() => {
@@ -60,30 +58,30 @@ export default function CoursesPage() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Update filters when debounced keyword changes
-  useEffect(() => {
-    setFilters((prev) => ({ ...prev, keyword: debouncedKeyword }));
-  }, [debouncedKeyword]);
-
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
       router.push("/sign-in");
     }
   }, [isLoaded, isSignedIn, router]);
 
-  const { data, isLoading, error } = useSearchCourses(filters);
+  // Combine filters with debounced keyword
+  const searchFilters = {
+    ...filters,
+    keyword: debouncedKeyword,
+  };
+
+  const { data, isLoading, error } = useSearchCourses(searchFilters);
 
   const handleClearFilters = () => {
     setSearchTerm("");
     setFilters({
-      keyword: "",
       program: "all",
       semester: "all",
       credits: "all",
     });
   };
 
-  const hasActiveFilters = filters.keyword || (filters.program && filters.program !== "all") || (filters.semester && filters.semester !== "all") || (filters.credits && filters.credits !== "all");
+  const hasActiveFilters = searchTerm || (filters.program && filters.program !== "all") || (filters.semester && filters.semester !== "all") || (filters.credits && filters.credits !== "all");
 
   if (!isLoaded || isLoading) {
     return (
