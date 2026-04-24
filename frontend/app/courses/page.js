@@ -8,7 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { useSearchCourses } from "@/hooks/useCourses";
 import { Loader2, Search, BookOpen, Filter, X } from "lucide-react";
 
@@ -36,6 +44,25 @@ const CREDITS = [
   { value: "6", label: "6 Credits" },
 ];
 
+function getPageNumbers(page, totalPages) {
+  const pages = [];
+  const addPage = (n) => pages.push({ type: "page", n });
+  const addEllipsis = () => pages.push({ type: "ellipsis" });
+
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) addPage(i);
+    return pages;
+  }
+
+  addPage(1);
+  if (page > 3) addEllipsis();
+  for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) addPage(i);
+  if (page < totalPages - 2) addEllipsis();
+  addPage(totalPages);
+
+  return pages;
+}
+
 export default function CoursesPage() {
   const { isLoaded, isSignedIn } = useUser();
   const router = useRouter();
@@ -49,12 +76,10 @@ export default function CoursesPage() {
     credits: "all",
   });
 
-  // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedKeyword(searchTerm);
     }, 300);
-
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
@@ -77,11 +102,7 @@ export default function CoursesPage() {
 
   const handleClearFilters = () => {
     setSearchTerm("");
-    setFilters({
-      program: "all",
-      semester: "all",
-      credits: "all",
-    });
+    setFilters({ program: "all", semester: "all", credits: "all" });
   };
 
   const hasActiveFilters =
@@ -105,15 +126,14 @@ export default function CoursesPage() {
   const courses = data?.courses || [];
   const total = data?.total || 0;
   const totalPages = data?.totalPages || 1;
+  const pageNumbers = getPageNumbers(page, totalPages);
 
   return (
     <div className="min-h-screen bg-white">
       <div className="mx-auto max-w-7xl p-6">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold tracking-tight text-black">
-            Course Catalog
-          </h1>
+          <h1 className="text-4xl font-bold tracking-tight text-black">Course Catalog</h1>
           <p className="mt-2 text-lg font-light text-black/60">
             Browse and search available courses
           </p>
@@ -135,7 +155,6 @@ export default function CoursesPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Search Input */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
               <Input
@@ -147,7 +166,6 @@ export default function CoursesPage() {
               />
             </div>
 
-            {/* Filter Dropdowns */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <Select
                 value={filters.program}
@@ -198,7 +216,6 @@ export default function CoursesPage() {
               </Select>
             </div>
 
-            {/* Clear Filters Button */}
             {hasActiveFilters && (
               <Button
                 onClick={handleClearFilters}
@@ -212,23 +229,19 @@ export default function CoursesPage() {
           </CardContent>
         </Card>
 
-        {/* Results Count */}
+        {/* Results bar */}
         <div className="mb-4 flex items-center justify-between">
           <p className="font-medium text-black/60">
             {total} {total === 1 ? "course" : "courses"} found
           </p>
-          {isFetching && (
-            <Loader2 className="h-4 w-4 animate-spin text-black/40" />
-          )}
+          {isFetching && <Loader2 className="h-4 w-4 animate-spin text-black/40" />}
         </div>
 
         {/* Course Grid */}
         {error ? (
           <Card className="border-black/10">
             <CardContent className="py-12 text-center">
-              <p className="font-medium text-black/60">
-                Failed to load courses. Please try again.
-              </p>
+              <p className="font-medium text-black/60">Failed to load courses. Please try again.</p>
             </CardContent>
           </Card>
         ) : courses.length === 0 ? (
@@ -236,9 +249,7 @@ export default function CoursesPage() {
             <CardContent className="py-12 text-center">
               <BookOpen className="mx-auto mb-4 h-12 w-12 text-black/20" />
               <p className="text-lg font-semibold text-black">No courses found</p>
-              <p className="mt-1 font-light text-black/60">
-                Try adjusting your search or filters
-              </p>
+              <p className="mt-1 font-light text-black/60">Try adjusting your search or filters</p>
             </CardContent>
           </Card>
         ) : (
@@ -257,9 +268,7 @@ export default function CoursesPage() {
                       {course.credits} {course.credits === 1 ? "Credit" : "Credits"}
                     </Badge>
                   </div>
-                  <CardTitle className="text-xl font-semibold text-black">
-                    {course.title}
-                  </CardTitle>
+                  <CardTitle className="text-xl font-semibold text-black">{course.title}</CardTitle>
                   {course.description && (
                     <CardDescription className="mt-2 line-clamp-2 font-light text-black/60">
                       {course.description}
@@ -286,12 +295,6 @@ export default function CoursesPage() {
                         <span className="text-sm font-semibold text-black">{course.difficulty}/5</span>
                       </div>
                     )}
-                    {course.workload && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-black/50">Workload</span>
-                        <span className="text-sm font-semibold text-black">{course.workload}</span>
-                      </div>
-                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -306,45 +309,35 @@ export default function CoursesPage() {
               <PaginationContent>
                 <PaginationItem>
                   <PaginationPrevious
-                    href="#"
-                    onClick={(e) => { e.preventDefault(); if (page > 1) setPage(page - 1); }}
-                    className={page <= 1 ? "pointer-events-none opacity-40" : "cursor-pointer"}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    aria-disabled={page === 1}
+                    className={page === 1 ? "pointer-events-none opacity-40" : "cursor-pointer"}
                   />
                 </PaginationItem>
 
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
-                  .reduce((acc, p, idx, arr) => {
-                    if (idx > 0 && p - arr[idx - 1] > 1) {
-                      acc.push("ellipsis-" + p);
-                    }
-                    acc.push(p);
-                    return acc;
-                  }, [])
-                  .map((item) =>
-                    typeof item === "string" ? (
-                      <PaginationItem key={item}>
-                        <PaginationEllipsis />
-                      </PaginationItem>
-                    ) : (
-                      <PaginationItem key={item}>
-                        <PaginationLink
-                          href="#"
-                          isActive={item === page}
-                          onClick={(e) => { e.preventDefault(); setPage(item); }}
-                          className="cursor-pointer"
-                        >
-                          {item}
-                        </PaginationLink>
-                      </PaginationItem>
-                    )
-                  )}
+                {pageNumbers.map((item, i) =>
+                  item.type === "ellipsis" ? (
+                    <PaginationItem key={`ellipsis-${i}`}>
+                      <PaginationEllipsis />
+                    </PaginationItem>
+                  ) : (
+                    <PaginationItem key={item.n}>
+                      <PaginationLink
+                        onClick={() => setPage(item.n)}
+                        isActive={page === item.n}
+                        className="cursor-pointer"
+                      >
+                        {item.n}
+                      </PaginationLink>
+                    </PaginationItem>
+                  )
+                )}
 
                 <PaginationItem>
                   <PaginationNext
-                    href="#"
-                    onClick={(e) => { e.preventDefault(); if (page < totalPages) setPage(page + 1); }}
-                    className={page >= totalPages ? "pointer-events-none opacity-40" : "cursor-pointer"}
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    aria-disabled={page === totalPages}
+                    className={page === totalPages ? "pointer-events-none opacity-40" : "cursor-pointer"}
                   />
                 </PaginationItem>
               </PaginationContent>

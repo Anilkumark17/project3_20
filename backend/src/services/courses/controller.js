@@ -65,7 +65,6 @@ class CourseController {
         maxDifficulty: req.query.maxDifficulty,
         credits: req.query.credits,
       };
-
       const pagination = {
         page: Math.max(1, parseInt(req.query.page) || 1),
         pageSize: Math.min(50, Math.max(1, parseInt(req.query.pageSize) || 12)),
@@ -187,7 +186,6 @@ class CourseController {
         keyword: req.query.keyword,
         difficulty: req.query.difficulty ? JSON.parse(req.query.difficulty) : undefined,
       };
-
       const pagination = {
         page: Math.max(1, parseInt(req.query.page) || 1),
         pageSize: Math.min(50, Math.max(1, parseInt(req.query.pageSize) || 12)),

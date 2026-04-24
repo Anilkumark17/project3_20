@@ -51,7 +51,6 @@ class CourseService {
   }
 
   async createCourse(courseData) {
-    // Check if course code already exists
     const existing = await courseRepository.findByCode(courseData.code);
     if (existing) {
       throw new Error("Course code already exists");
@@ -67,7 +66,6 @@ class CourseService {
       throw new Error("Course not found");
     }
 
-    // If updating code, check for duplicates
     if (courseData.code && courseData.code !== existing.code) {
       const duplicate = await courseRepository.findByCode(courseData.code);
       if (duplicate) {

@@ -65,7 +65,7 @@ export const useCourseCatalog = (filters) => {
       const { data } = await axios.get(`/courses/catalog?${params.toString()}`);
       return data;
     },
-    staleTime: 2 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 };

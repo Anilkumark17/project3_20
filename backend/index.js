@@ -9,6 +9,8 @@ const dashboardRoutes = require("./src/services/dashboard/routes");
 const recommendationRoutes = require("./src/services/recommendations/routes");
 const ragRoutes = require("./src/services/rag/routes");
 
+const courseCache = require("./src/config/courseCache");
+
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -46,7 +48,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
+  await courseCache.load();
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📍 API: http://localhost:${PORT}`);
 });
