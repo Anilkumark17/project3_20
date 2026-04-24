@@ -45,7 +45,6 @@ const ratings = pgTable("ratings", {
   userId: integer("user_id").references(() => users.id).notNull(),
   courseId: integer("course_id").references(() => courses.id).notNull(),
   difficulty: integer("difficulty"),
-  workload: integer("workload"),
   rating: integer("rating").notNull(),
   review: text("review"),
   createdAt: timestamp("created_at").defaultNow(),

@@ -66,7 +66,12 @@ class CourseController {
         credits: req.query.credits,
       };
 
-      const result = await courseService.searchCourses(filters);
+      const pagination = {
+        page: Math.max(1, parseInt(req.query.page) || 1),
+        pageSize: Math.min(50, Math.max(1, parseInt(req.query.pageSize) || 12)),
+      };
+
+      const result = await courseService.searchCourses(filters, pagination);
 
       return res.status(200).json({
         success: true,
@@ -183,7 +188,12 @@ class CourseController {
         difficulty: req.query.difficulty ? JSON.parse(req.query.difficulty) : undefined,
       };
 
-      const result = await courseService.getCourseCatalog(filters);
+      const pagination = {
+        page: Math.max(1, parseInt(req.query.page) || 1),
+        pageSize: Math.min(50, Math.max(1, parseInt(req.query.pageSize) || 12)),
+      };
+
+      const result = await courseService.getCourseCatalog(filters, pagination);
 
       return res.status(200).json({
         success: true,

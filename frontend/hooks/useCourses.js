@@ -28,10 +28,10 @@ export const useCourse = (id) => {
   });
 };
 
-// Search courses with filters
-export const useSearchCourses = (filters) => {
+// Search courses with filters and pagination
+export const useSearchCourses = (filters, page = 1) => {
   return useQuery({
-    queryKey: ["courses", "search", filters],
+    queryKey: ["courses", "search", filters, page],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (filters.keyword) params.append("keyword", filters.keyword);
@@ -40,11 +40,14 @@ export const useSearchCourses = (filters) => {
       if (filters.minDifficulty) params.append("minDifficulty", filters.minDifficulty);
       if (filters.maxDifficulty) params.append("maxDifficulty", filters.maxDifficulty);
       if (filters.credits && filters.credits !== "all") params.append("credits", filters.credits);
+      params.append("page", page.toString());
+      params.append("pageSize", "12");
 
       const { data } = await axios.get(`/courses/search?${params.toString()}`);
       return data;
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes
+    staleTime: 10 * 60 * 1000, // courses are mostly static — 10 mins per frontend-skills.md
+    placeholderData: (prev) => prev, // keep previous page visible while next loads
     refetchOnWindowFocus: false,
   });
 };

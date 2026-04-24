@@ -9,9 +9,10 @@ export function QueryProvider({ children }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 5 * 60 * 1000,
-            gcTime: 10 * 60 * 1000,
+            staleTime: 5 * 60 * 1000,   // 5 min default — serves cache first, revalidates silently
+            gcTime: 15 * 60 * 1000,      // keep unused data 15 min before garbage collecting
             refetchOnWindowFocus: false,
+            refetchOnMount: false,        // show cached data instantly on revisit
             retry: 1,
           },
         },
