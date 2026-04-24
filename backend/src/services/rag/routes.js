@@ -1,11 +1,11 @@
 const express = require("express");
-const controller = require("./controller");
-
 const router = express.Router();
+const ragController = require("./controller");
 
-router.get("/", controller.getDocuments);
-router.get("/:namespace", controller.getDocumentWithChunks);
-router.get("/search/:semester", controller.searchCourses);
-router.delete("/:namespace", controller.deleteDocument);
+// Ask a question to the Graph RAG
+router.post("/ask", (req, res) => ragController.ask(req, res));
+
+// Ask a question with streaming response (SSE)
+router.post("/ask/stream", (req, res) => ragController.askStream(req, res));
 
 module.exports = router;

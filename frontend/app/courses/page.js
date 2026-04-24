@@ -40,16 +40,14 @@ export default function CoursesPage() {
   const { isLoaded, isSignedIn } = useUser();
   const router = useRouter();
 
+  const [page, setPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedKeyword, setDebouncedKeyword] = useState("");
   const [filters, setFilters] = useState({
-    keyword: "",
     program: "all",
     semester: "all",
     credits: "all",
   });
-
-  const [page, setPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedKeyword, setDebouncedKeyword] = useState("");
 
   // Debounce search input
   useEffect(() => {
@@ -60,15 +58,10 @@ export default function CoursesPage() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Update filters when debounced keyword changes
-  useEffect(() => {
-    setFilters((prev) => ({ ...prev, keyword: debouncedKeyword }));
-  }, [debouncedKeyword]);
-
-  // Reset to page 1 whenever filters change
+  // Reset to page 1 whenever filters or keyword change
   useEffect(() => {
     setPage(1);
-  }, [filters.keyword, filters.program, filters.semester, filters.credits]);
+  }, [debouncedKeyword, filters.program, filters.semester, filters.credits]);
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
@@ -76,19 +69,26 @@ export default function CoursesPage() {
     }
   }, [isLoaded, isSignedIn, router]);
 
-  const { data, isLoading, isFetching, error } = useSearchCourses(filters, page);
+  // Single hook call — keyword merged inline, no duplicate state
+  const { data, isLoading, isFetching, error } = useSearchCourses(
+    { ...filters, keyword: debouncedKeyword },
+    page
+  );
 
   const handleClearFilters = () => {
     setSearchTerm("");
     setFilters({
-      keyword: "",
       program: "all",
       semester: "all",
       credits: "all",
     });
   };
 
-  const hasActiveFilters = filters.keyword || (filters.program && filters.program !== "all") || (filters.semester && filters.semester !== "all") || (filters.credits && filters.credits !== "all");
+  const hasActiveFilters =
+    searchTerm ||
+    filters.program !== "all" ||
+    filters.semester !== "all" ||
+    filters.credits !== "all";
 
   if (!isLoaded || isLoading) {
     return (

@@ -11,12 +11,14 @@ const profileRoutes = require("./services/profile/routes");
 const courseRoutes = require("./services/courses/routes");
 const dashboardRoutes = require("./services/dashboard/routes");
 const recommendationRoutes = require("./services/recommendations/routes");
+const ragRoutes = require("./services/rag/routes");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/recommendations", recommendationRoutes);
+app.use("/api/rag", ragRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
