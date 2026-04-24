@@ -22,14 +22,21 @@ class CourseService {
     return course;
   }
 
-  async searchCourses(filters) {
-    const courses = await courseRepository.search(filters);
-    const total = await courseRepository.count(filters);
-    
+  async searchCourses(filters, pagination = {}) {
+    const { page = 1, pageSize = 12 } = pagination;
+    const [courses, total] = await Promise.all([
+      courseRepository.search(filters, { page, pageSize }),
+      courseRepository.count(filters),
+    ]);
+    const totalPages = Math.ceil(total / pageSize);
+
     return {
       courses,
       total,
-      filters: filters,
+      page,
+      pageSize,
+      totalPages,
+      filters,
     };
   }
 
@@ -82,9 +89,9 @@ class CourseService {
     return true;
   }
 
-  async getCourseCatalog(filters = {}) {
+  async getCourseCatalog(filters = {}, pagination = {}) {
     const { program, semester, keyword, difficulty } = filters;
-    
+
     const searchFilters = {};
     if (program) searchFilters.program = program;
     if (semester) searchFilters.semester = semester;
@@ -94,8 +101,7 @@ class CourseService {
       searchFilters.maxDifficulty = difficulty.max;
     }
 
-    const result = await this.searchCourses(searchFilters);
-    return result;
+    return await this.searchCourses(searchFilters, pagination);
   }
 }
 

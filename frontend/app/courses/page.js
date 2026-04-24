@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { useSearchCourses } from "@/hooks/useCourses";
 import { Loader2, Search, BookOpen, Filter, X } from "lucide-react";
 
@@ -21,10 +22,8 @@ const PROGRAMS = [
 
 const SEMESTERS = [
   { value: "all", label: "All Semesters" },
-  ...Array.from({ length: 8 }, (_, i) => ({
-    value: (i + 1).toString(),
-    label: `Semester ${i + 1}`,
-  })),
+  { value: "1", label: "Monsoon" },
+  { value: "2", label: "Spring" },
 ];
 
 const CREDITS = [
@@ -48,6 +47,7 @@ export default function CoursesPage() {
     credits: "all",
   });
 
+  const [page, setPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedKeyword, setDebouncedKeyword] = useState("");
 
@@ -65,13 +65,18 @@ export default function CoursesPage() {
     setFilters((prev) => ({ ...prev, keyword: debouncedKeyword }));
   }, [debouncedKeyword]);
 
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setPage(1);
+  }, [filters.keyword, filters.program, filters.semester, filters.credits]);
+
   useEffect(() => {
     if (isLoaded && !isSignedIn) {
       router.push("/sign-in");
     }
   }, [isLoaded, isSignedIn, router]);
 
-  const { data, isLoading, error } = useSearchCourses(filters);
+  const { data, isLoading, isFetching, error } = useSearchCourses(filters, page);
 
   const handleClearFilters = () => {
     setSearchTerm("");
@@ -99,6 +104,7 @@ export default function CoursesPage() {
 
   const courses = data?.courses || [];
   const total = data?.total || 0;
+  const totalPages = data?.totalPages || 1;
 
   return (
     <div className="min-h-screen bg-white">
@@ -211,6 +217,9 @@ export default function CoursesPage() {
           <p className="font-medium text-black/60">
             {total} {total === 1 ? "course" : "courses"} found
           </p>
+          {isFetching && (
+            <Loader2 className="h-4 w-4 animate-spin text-black/40" />
+          )}
         </div>
 
         {/* Course Grid */}
@@ -287,6 +296,59 @@ export default function CoursesPage() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="mt-8">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); if (page > 1) setPage(page - 1); }}
+                    className={page <= 1 ? "pointer-events-none opacity-40" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+                  .reduce((acc, p, idx, arr) => {
+                    if (idx > 0 && p - arr[idx - 1] > 1) {
+                      acc.push("ellipsis-" + p);
+                    }
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((item) =>
+                    typeof item === "string" ? (
+                      <PaginationItem key={item}>
+                        <PaginationEllipsis />
+                      </PaginationItem>
+                    ) : (
+                      <PaginationItem key={item}>
+                        <PaginationLink
+                          href="#"
+                          isActive={item === page}
+                          onClick={(e) => { e.preventDefault(); setPage(item); }}
+                          className="cursor-pointer"
+                        >
+                          {item}
+                        </PaginationLink>
+                      </PaginationItem>
+                    )
+                  )}
+
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => { e.preventDefault(); if (page < totalPages) setPage(page + 1); }}
+                    className={page >= totalPages ? "pointer-events-none opacity-40" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </div>
         )}
       </div>

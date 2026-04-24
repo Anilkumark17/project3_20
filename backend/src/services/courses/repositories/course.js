@@ -1,6 +1,6 @@
 const db = require("../../../db");
 const { courses } = require("../../../db/schema");
-const { eq, like, and, or, sql } = require("drizzle-orm");
+const { eq, like, and, or, sql, isNull } = require("drizzle-orm");
 
 class CourseRepository {
   async findAll() {
@@ -18,11 +18,23 @@ class CourseRepository {
     return result[0] || null;
   }
 
-  async search(filters = {}) {
+  async search(filters = {}, pagination = {}) {
+    const { page = 1, pageSize = 12 } = pagination;
+    const offset = (page - 1) * pageSize;
+
     let query = db.select().from(courses);
+    const conditions = this._buildConditions(filters);
+
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+
+    return await query.limit(pageSize).offset(offset);
+  }
+
+  _buildConditions(filters) {
     const conditions = [];
 
-    // Search by keyword (code or title)
     if (filters.keyword) {
       conditions.push(
         or(
@@ -31,37 +43,25 @@ class CourseRepository {
         )
       );
     }
-
-    // Filter by program
     if (filters.program) {
       conditions.push(eq(courses.program, filters.program));
     }
-
-    // Filter by semester
     if (filters.semester) {
-      conditions.push(eq(courses.semester, parseInt(filters.semester)));
+      conditions.push(
+        or(eq(courses.semester, parseInt(filters.semester)), isNull(courses.semester))
+      );
     }
-
-    // Filter by difficulty range
     if (filters.minDifficulty) {
       conditions.push(sql`${courses.difficulty} >= ${parseInt(filters.minDifficulty)}`);
     }
     if (filters.maxDifficulty) {
       conditions.push(sql`${courses.difficulty} <= ${parseInt(filters.maxDifficulty)}`);
     }
-
-    // Filter by credits
     if (filters.credits) {
       conditions.push(eq(courses.credits, parseInt(filters.credits)));
     }
 
-    // Apply all conditions
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-
-    const result = await query;
-    return result;
+    return conditions;
   }
 
   async create(data) {
@@ -95,14 +95,7 @@ class CourseRepository {
 
   async count(filters = {}) {
     let query = db.select({ count: sql`count(*)` }).from(courses);
-    const conditions = [];
-
-    if (filters.program) {
-      conditions.push(eq(courses.program, filters.program));
-    }
-    if (filters.semester) {
-      conditions.push(eq(courses.semester, parseInt(filters.semester)));
-    }
+    const conditions = this._buildConditions(filters);
 
     if (conditions.length > 0) {
       query = query.where(and(...conditions));
