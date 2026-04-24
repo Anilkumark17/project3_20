@@ -1,7 +1,8 @@
 const express = require("express");
 const router = express.Router();
-const { getRecommendations } = require("./controller");
+const { getRecommendations, refreshRecommendations } = require("./controller");
 
-// router.get("/:userId", getRecommendations);
+router.get("/:clerkId", getRecommendations);
+router.post("/:clerkId/refresh", refreshRecommendations);
 
 module.exports = router;
