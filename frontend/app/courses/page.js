@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -76,6 +76,8 @@ export default function CoursesPage() {
     credits: "all",
   });
 
+  const isFirstRender = useRef(true);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedKeyword(searchTerm);
@@ -83,10 +85,13 @@ export default function CoursesPage() {
     return () => clearTimeout(timer);
   }, [searchTerm]);
 
-  // Reset to page 1 whenever filters or keyword change
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     setPage(1);
-  }, [debouncedKeyword, filters.program, filters.semester, filters.credits]);
+  }, [filters.program, filters.semester, filters.credits, debouncedKeyword]);
 
   useEffect(() => {
     if (isLoaded && !isSignedIn) {

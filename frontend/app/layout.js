@@ -1,6 +1,7 @@
 import { Poppins } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { QueryProvider } from "@/providers/query-provider";
+import { Toaster } from "sonner";
 import Navbar from "@/components/Navbar";
 import "./globals.css";
 
@@ -23,6 +24,7 @@ export default function RootLayout({ children }) {
           <QueryProvider>
             <Navbar />
             {children}
+            <Toaster position="top-right" richColors />
           </QueryProvider>
         </body>
       </html>

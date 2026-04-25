@@ -10,7 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useUpdateProfile, useUser as useUserData } from "@/hooks/useAuth";
-import { Loader2, GraduationCap, BookOpen, Target, CheckCircle2, AlertCircle } from "lucide-react";
+import { useCompletedCourses, useRemoveCompletedCourse } from "@/hooks/useCompletedCourses";
+import AddCourseModal from "@/components/courses/AddCourseModal";
+import { Loader2, GraduationCap, BookOpen, Target, CheckCircle2, AlertCircle, X } from "lucide-react";
+import { toast } from "sonner";
 
 const PROGRAMS = [
   { value: "CSE", label: "Computer Science and Engineering (CSE)" },
@@ -35,6 +38,9 @@ export default function ProfilePage() {
   const router = useRouter();
   const { data: userData, isLoading, refetch } = useUserData(user?.id);
   const updateProfileMutation = useUpdateProfile();
+  const { data: completedCourses = [], isLoading: coursesLoading } = useCompletedCourses(user?.id);
+  const removeCourseMutation = useRemoveCompletedCourse();
+  const [removingCourseId, setRemovingCourseId] = useState(null);
 
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -355,27 +361,101 @@ export default function ProfilePage() {
                   </CardDescription>
                 </div>
               </div>
-              <Button className="bg-white font-semibold text-black shadow-lg hover:bg-gray-100 transition-all">
-                <BookOpen className="mr-2 h-4 w-4" />
-                Add Course
-              </Button>
+              <AddCourseModal 
+                clerkId={user?.id}
+                trigger={
+                  <Button className="bg-white font-semibold text-black shadow-lg hover:bg-gray-100 transition-all">
+                    <BookOpen className="mr-2 h-4 w-4" />
+                    Add Course
+                  </Button>
+                }
+              />
             </div>
           </CardHeader>
           <CardContent className="p-8">
-            <div className="rounded-xl border-2 border-dashed border-black/20 bg-gray-50 p-12 text-center">
-              <div className="mx-auto w-fit rounded-full bg-black/10 p-6">
-                <AlertCircle className="h-12 w-12 text-black" />
+            {coursesLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-black" />
               </div>
-              <h3 className="mt-6 text-xl font-bold text-black">No Courses Added Yet</h3>
-              <p className="mt-2 text-base text-black/60">
-                Start building your academic profile by adding courses you&apos;ve completed.
-                This helps us provide better recommendations tailored to your progress.
-              </p>
-              <Button className="mt-6 bg-black font-semibold text-white hover:bg-black/90">
-                <BookOpen className="mr-2 h-4 w-4" />
-                Add Your First Course
-              </Button>
-            </div>
+            ) : completedCourses.length === 0 ? (
+              <div className="rounded-xl border-2 border-dashed border-black/20 bg-gray-50 p-12 text-center">
+                <div className="mx-auto w-fit rounded-full bg-black/10 p-6">
+                  <AlertCircle className="h-12 w-12 text-black" />
+                </div>
+                <h3 className="mt-6 text-xl font-bold text-black">No Courses Added Yet</h3>
+                <p className="mt-2 text-base text-black/60">
+                  Start building your academic profile by adding courses you&apos;ve completed.
+                  This helps us provide better recommendations tailored to your progress.
+                </p>
+                <AddCourseModal 
+                  clerkId={user?.id}
+                  trigger={
+                    <Button className="mt-6 bg-black font-semibold text-white hover:bg-black/90">
+                      <BookOpen className="mr-2 h-4 w-4" />
+                      Add Your First Course
+                    </Button>
+                  }
+                />
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {completedCourses.map((course) => (
+                  <Card key={course.id} className="border-black/10 hover:shadow-lg transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge variant="outline" className="font-mono text-xs">
+                              {course.courseCode}
+                            </Badge>
+                            {course.grade && (
+                              <Badge className="bg-black text-white">
+                                {course.grade}
+                              </Badge>
+                            )}
+                          </div>
+                          <h4 className="font-semibold text-sm line-clamp-2 text-black">
+                            {course.courseTitle}
+                          </h4>
+                          <p className="text-xs text-black/60 mt-1">
+                            {course.courseCredits} {course.courseCredits === 1 ? 'Credit' : 'Credits'}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-black/60 hover:text-red-600 hover:bg-red-50"
+                          disabled={removingCourseId === course.id}
+                          onClick={async () => {
+                            if (confirm(`Remove ${course.courseCode} from your profile?`)) {
+                              setRemovingCourseId(course.id);
+                              try {
+                                await removeCourseMutation.mutateAsync({
+                                  clerkId: user?.id,
+                                  courseId: course.id,
+                                });
+                                toast.success(`${course.courseCode} removed successfully`);
+                              } catch (error) {
+                                console.error('Remove course error:', error);
+                                toast.error(error.response?.data?.message || 'Failed to remove course');
+                              } finally {
+                                setRemovingCourseId(null);
+                              }
+                            }
+                          }}
+                        >
+                          {removingCourseId === course.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <X className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
