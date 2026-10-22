@@ -1,355 +1,192 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useUser } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { BookOpen, Loader2, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
+  Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious,
 } from "@/components/ui/pagination";
+import { PageContainer, PageHeader } from "@/components/PageHeader";
+import DifficultyBadge from "@/components/courses/DifficultyBadge";
+import CourseDetailSheet from "@/components/courses/CourseDetailSheet";
 import { useSearchCourses } from "@/hooks/useCourses";
-import { Loader2, Search, BookOpen, Filter, X } from "lucide-react";
+import { SEASONS } from "@/lib/constants";
 
-const PROGRAMS = [
-  { value: "all", label: "All Programs" },
-  { value: "CSE", label: "CSE" },
-  { value: "PDM", label: "PDM" },
-  { value: "CSIS", label: "CSIS" },
-  { value: "CASE", label: "CASE" },
-];
-
-const SEMESTERS = [
-  { value: "all", label: "All Semesters" },
-  { value: "1", label: "Monsoon" },
-  { value: "2", label: "Spring" },
-];
-
-const CREDITS = [
-  { value: "all", label: "All Credits" },
-  { value: "1", label: "1 Credit" },
-  { value: "2", label: "2 Credits" },
-  { value: "3", label: "3 Credits" },
-  { value: "4", label: "4 Credits" },
-  { value: "5", label: "5 Credits" },
-  { value: "6", label: "6 Credits" },
-];
+const FILTERS = {
+  program: [
+    { value: "all", label: "All programs" },
+    { value: "CSE", label: "CSE" },
+    { value: "CSIS", label: "CSIS" },
+    { value: "PDM", label: "PDM" },
+    { value: "Elective", label: "Open electives" },
+  ],
+  semester: [
+    { value: "all", label: "Any season" },
+    { value: "1", label: "Monsoon" },
+    { value: "2", label: "Spring" },
+  ],
+  credits: [
+    { value: "all", label: "Any credits" },
+    { value: "2", label: "2 credits" },
+    { value: "4", label: "4 credits" },
+  ],
+};
 
 function getPageNumbers(page, totalPages) {
-  const pages = [];
-  const addPage = (n) => pages.push({ type: "page", n });
-  const addEllipsis = () => pages.push({ type: "ellipsis" });
-
-  if (totalPages <= 7) {
-    for (let i = 1; i <= totalPages; i++) addPage(i);
-    return pages;
-  }
-
-  addPage(1);
-  if (page > 3) addEllipsis();
-  for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) addPage(i);
-  if (page < totalPages - 2) addEllipsis();
-  addPage(totalPages);
-
+  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => ({ type: "page", n: i + 1 }));
+  const pages = [{ type: "page", n: 1 }];
+  if (page > 3) pages.push({ type: "ellipsis" });
+  for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pages.push({ type: "page", n: i });
+  if (page < totalPages - 2) pages.push({ type: "ellipsis" });
+  pages.push({ type: "page", n: totalPages });
   return pages;
 }
 
-export default function CoursesPage() {
-  const { isLoaded, isSignedIn } = useUser();
-  const router = useRouter();
-
-  const [page, setPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedKeyword, setDebouncedKeyword] = useState("");
-  const [filters, setFilters] = useState({
-    program: "all",
-    semester: "all",
-    credits: "all",
-  });
-
-  const isFirstRender = useRef(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedKeyword(searchTerm);
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-    setPage(1);
-  }, [filters.program, filters.semester, filters.credits, debouncedKeyword]);
-
-  useEffect(() => {
-    if (isLoaded && !isSignedIn) {
-      router.push("/sign-in");
-    }
-  }, [isLoaded, isSignedIn, router]);
-
-  // Single hook call — keyword merged inline, no duplicate state
-  const { data, isLoading, isFetching, error } = useSearchCourses(
-    { ...filters, keyword: debouncedKeyword },
-    page
+function CourseTile({ course, onOpen }) {
+  return (
+    <button
+      onClick={() => onOpen(course)}
+      className="group flex h-full flex-col rounded-2xl border bg-card p-5 text-left shadow-xs transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <Badge variant="secondary" className="font-mono">{course.code}</Badge>
+        <span className="text-xs text-muted-foreground">{course.credits} credits</span>
+      </div>
+      <h3 className="mt-3 font-semibold leading-snug group-hover:text-primary">{course.title}</h3>
+      {course.description && <p className="mt-2 line-clamp-3 text-sm text-muted-foreground">{course.description}</p>}
+      <div className="mt-auto flex flex-wrap items-center gap-2 pt-4">
+        {course.program && <Badge variant="outline">{course.program}</Badge>}
+        {course.semester && <Badge variant="outline">{SEASONS[course.semester]}</Badge>}
+        <DifficultyBadge level={course.difficulty} />
+      </div>
+    </button>
   );
+}
 
-  const handleClearFilters = () => {
-    setSearchTerm("");
+export default function CoursesPage() {
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState("");
+  const [keyword, setKeyword] = useState("");
+  const [filters, setFilters] = useState({ program: "all", semester: "all", credits: "all" });
+  const [selected, setSelected] = useState(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setKeyword(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const { data, isLoading, isFetching, error } = useSearchCourses({ ...filters, keyword }, page);
+
+  const setFilter = (key, value) => {
+    setFilters((f) => ({ ...f, [key]: value }));
+    setPage(1);
+  };
+  const hasFilters = search || Object.values(filters).some((v) => v !== "all");
+  const clear = () => {
+    setSearch("");
     setFilters({ program: "all", semester: "all", credits: "all" });
   };
-
-  const hasActiveFilters =
-    searchTerm ||
-    filters.program !== "all" ||
-    filters.semester !== "all" ||
-    filters.credits !== "all";
-
-  if (!isLoaded || isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
-        <Loader2 className="h-8 w-8 animate-spin text-black" />
-      </div>
-    );
-  }
-
-  if (!isSignedIn) {
-    return null;
-  }
 
   const courses = data?.courses || [];
   const total = data?.total || 0;
   const totalPages = data?.totalPages || 1;
-  const pageNumbers = getPageNumbers(page, totalPages);
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="mx-auto max-w-7xl p-6">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold tracking-tight text-black">Course Catalog</h1>
-          <p className="mt-2 text-lg font-light text-black/60">
-            Browse and search available courses
-          </p>
+    <PageContainer>
+      <PageHeader
+        eyebrow="Catalog"
+        title="Course catalog"
+        description="Every Monsoon and Spring offering. Open a course to see its details or ask the advisor about it."
+      />
+
+      <div className="mb-6 flex flex-col gap-3 rounded-2xl border bg-card p-3 lg:flex-row lg:items-center">
+        <div className="relative flex-1">
+          <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by code or title…"
+            className="h-10 border-0 bg-muted/50 pl-9 shadow-none focus-visible:ring-0"
+          />
         </div>
-
-        {/* Search and Filters */}
-        <Card className="mb-6 border-black/10">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="rounded-xl bg-black p-2.5">
-                <Filter className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <CardTitle className="font-semibold text-black">Search & Filter</CardTitle>
-                <CardDescription className="font-light text-black/60">
-                  Find courses by keyword, program, or semester
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/40" />
-              <Input
-                type="text"
-                placeholder="Search by course code or title..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-12 border-black/20 pl-10 font-medium"
-              />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <Select
-                value={filters.program}
-                onValueChange={(value) => setFilters({ ...filters, program: value })}
-              >
-                <SelectTrigger className="h-12 border-black/20 font-medium">
-                  <SelectValue placeholder="Select program" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PROGRAMS.map((program) => (
-                    <SelectItem key={program.value} value={program.value}>
-                      {program.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={filters.semester}
-                onValueChange={(value) => setFilters({ ...filters, semester: value })}
-              >
-                <SelectTrigger className="h-12 border-black/20 font-medium">
-                  <SelectValue placeholder="Select semester" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SEMESTERS.map((semester) => (
-                    <SelectItem key={semester.value} value={semester.value}>
-                      {semester.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={filters.credits}
-                onValueChange={(value) => setFilters({ ...filters, credits: value })}
-              >
-                <SelectTrigger className="h-12 border-black/20 font-medium">
-                  <SelectValue placeholder="Select credits" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CREDITS.map((credit) => (
-                    <SelectItem key={credit.value} value={credit.value}>
-                      {credit.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {hasActiveFilters && (
-              <Button
-                onClick={handleClearFilters}
-                variant="outline"
-                className="w-full border-black/20 font-medium hover:bg-black/5 sm:w-auto"
-              >
-                <X className="mr-2 h-4 w-4" />
-                Clear Filters
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Results bar */}
-        <div className="mb-4 flex items-center justify-between">
-          <p className="font-medium text-black/60">
-            {total} {total === 1 ? "course" : "courses"} found
-          </p>
-          {isFetching && <Loader2 className="h-4 w-4 animate-spin text-black/40" />}
+        <div className="grid grid-cols-3 gap-2 lg:flex">
+          {Object.entries(FILTERS).map(([key, options]) => (
+            <Select key={key} value={filters[key]} onValueChange={(v) => setFilter(key, v)}>
+              <SelectTrigger className="h-10 w-full lg:w-40" aria-label={key}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {options.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          ))}
         </div>
-
-        {/* Course Grid */}
-        {error ? (
-          <Card className="border-black/10">
-            <CardContent className="py-12 text-center">
-              <p className="font-medium text-black/60">Failed to load courses. Please try again.</p>
-            </CardContent>
-          </Card>
-        ) : courses.length === 0 ? (
-          <Card className="border-black/10">
-            <CardContent className="py-12 text-center">
-              <BookOpen className="mx-auto mb-4 h-12 w-12 text-black/20" />
-              <p className="text-lg font-semibold text-black">No courses found</p>
-              <p className="mt-1 font-light text-black/60">Try adjusting your search or filters</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {courses.map((course) => (
-              <Card
-                key={course.id}
-                className="border-black/10 transition-all hover:border-black/20 hover:shadow-lg"
-              >
-                <CardHeader>
-                  <div className="mb-2 flex items-start justify-between">
-                    <Badge variant="outline" className="border-black/20 bg-black/5 font-mono font-medium text-black">
-                      {course.code}
-                    </Badge>
-                    <Badge variant="outline" className="border-black/20 font-medium text-black">
-                      {course.credits} {course.credits === 1 ? "Credit" : "Credits"}
-                    </Badge>
-                  </div>
-                  <CardTitle className="text-xl font-semibold text-black">{course.title}</CardTitle>
-                  {course.description && (
-                    <CardDescription className="mt-2 line-clamp-2 font-light text-black/60">
-                      {course.description}
-                    </CardDescription>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    {course.program && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-black/50">Program</span>
-                        <span className="text-sm font-semibold text-black">{course.program}</span>
-                      </div>
-                    )}
-                    {course.semester && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-black/50">Semester</span>
-                        <span className="text-sm font-semibold text-black">Semester {course.semester}</span>
-                      </div>
-                    )}
-                    {course.difficulty && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-black/50">Difficulty</span>
-                        <span className="text-sm font-semibold text-black">{course.difficulty}/5</span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="mt-8">
-            <Pagination>
-              <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    aria-disabled={page === 1}
-                    className={page === 1 ? "pointer-events-none opacity-40" : "cursor-pointer"}
-                  />
-                </PaginationItem>
-
-                {pageNumbers.map((item, i) =>
-                  item.type === "ellipsis" ? (
-                    <PaginationItem key={`ellipsis-${i}`}>
-                      <PaginationEllipsis />
-                    </PaginationItem>
-                  ) : (
-                    <PaginationItem key={item.n}>
-                      <PaginationLink
-                        onClick={() => setPage(item.n)}
-                        isActive={page === item.n}
-                        className="cursor-pointer"
-                      >
-                        {item.n}
-                      </PaginationLink>
-                    </PaginationItem>
-                  )
-                )}
-
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    aria-disabled={page === totalPages}
-                    className={page === totalPages ? "pointer-events-none opacity-40" : "cursor-pointer"}
-                  />
-                </PaginationItem>
-              </PaginationContent>
-            </Pagination>
-          </div>
+        {hasFilters && (
+          <Button variant="ghost" size="lg" onClick={clear}><X /> Clear</Button>
         )}
       </div>
-    </div>
+
+      <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+        {total} {total === 1 ? "course" : "courses"}
+        {isFetching && !isLoading && <Loader2 className="size-3.5 animate-spin" />}
+      </div>
+
+      {isLoading ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-52 rounded-2xl" />)}
+        </div>
+      ) : error ? (
+        <div className="rounded-2xl border bg-card py-16 text-center text-muted-foreground">Failed to load courses. {error.message}</div>
+      ) : courses.length === 0 ? (
+        <div className="rounded-2xl border border-dashed py-16 text-center">
+          <BookOpen className="mx-auto size-10 text-muted-foreground/50" />
+          <p className="mt-4 font-semibold">No courses match</p>
+          <p className="mt-1 text-sm text-muted-foreground">Try a different keyword or clear the filters.</p>
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {courses.map((c) => <CourseTile key={c.id} course={c} onOpen={setSelected} />)}
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <Pagination className="mt-8">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                aria-disabled={page === 1}
+                className={page === 1 ? "pointer-events-none opacity-40" : "cursor-pointer"}
+              />
+            </PaginationItem>
+            {getPageNumbers(page, totalPages).map((item, i) =>
+              item.type === "ellipsis" ? (
+                <PaginationItem key={`e${i}`}><PaginationEllipsis /></PaginationItem>
+              ) : (
+                <PaginationItem key={item.n}>
+                  <PaginationLink onClick={() => setPage(item.n)} isActive={page === item.n} className="cursor-pointer">{item.n}</PaginationLink>
+                </PaginationItem>
+              )
+            )}
+            <PaginationItem>
+              <PaginationNext
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                aria-disabled={page === totalPages}
+                className={page === totalPages ? "pointer-events-none opacity-40" : "cursor-pointer"}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
+
+      <CourseDetailSheet course={selected} onOpenChange={(open) => !open && setSelected(null)} />
+    </PageContainer>
   );
 }

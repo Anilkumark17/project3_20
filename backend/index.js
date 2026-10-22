@@ -1,57 +1,33 @@
-const express = require("express");
-const cors = require("cors");
-require("dotenv").config();
+const { env, assertServerEnv } = require("./src/config/env");
 
-const authRoutes = require("./src/services/auth/routes");
-const profileRoutes = require("./src/services/profile/routes");
-const courseRoutes = require("./src/services/courses/routes");
-const dashboardRoutes = require("./src/services/dashboard/routes");
-const recommendationRoutes = require("./src/services/recommendations/routes");
-const ragRoutes = require("./src/services/rag/routes");
+assertServerEnv();
 
+const app = require("./src/app");
 const courseCache = require("./src/config/courseCache");
+const { warmUp } = require("./src/rag/models");
 
-const app = express();
-const PORT = process.env.PORT || 5000;
-
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-app.get("/", (req, res) => {
-  res.json({ 
-    message: "ICA Backend API is running",
-    version: "1.0.0",
-    endpoints: {
-      auth: "/api/auth",
-      profile: "/api/profile",
-      courses: "/api/courses",
-      dashboard: "/api/dashboard",
-      recommendations: "/api/recommendations",
-      rag: "/api/rag",
-    }
-  });
-});
-
-app.use("/api/auth", authRoutes);
-app.use("/api/profile", profileRoutes);
-app.use("/api/courses", courseRoutes);
-app.use("/api/dashboard", dashboardRoutes);
-app.use("/api/recommendations", recommendationRoutes);
-app.use("/api/rag", ragRoutes);
-
-app.use((err, req, res, next) => {
-  console.error("Error:", err);
-  res.status(500).json({ 
-    error: "Internal server error",
-    message: err.message 
-  });
-});
-
-app.listen(PORT, async () => {
+async function start() {
   await courseCache.load();
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📍 API: http://localhost:${PORT}`);
-});
 
-module.exports = app;
+  const server = app.listen(env.PORT, () => {
+    console.log(`🚀 ICA API listening on http://localhost:${env.PORT} (${env.NODE_ENV})`);
+  });
+
+  // Load the ONNX embedding + reranker models in the background so the first question is fast.
+  warmUp()
+    .then(() => console.log("✓ RAG models loaded"))
+    .catch((err) => console.error("RAG model warm-up failed:", err.message));
+
+  const shutdown = (signal) => {
+    console.log(`${signal} received, shutting down…`);
+    server.close(() => process.exit(0));
+    setTimeout(() => process.exit(1), 10_000).unref();
+  };
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
+}
+
+start().catch((err) => {
+  console.error("Failed to start server:", err);
+  process.exit(1);
+});

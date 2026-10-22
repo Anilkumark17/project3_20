@@ -40,6 +40,7 @@ export function useUpdateProfile() {
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["profile", variables.clerkId] });
       queryClient.invalidateQueries({ queryKey: ["user", variables.clerkId] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", variables.clerkId] });
     },
   });
 }

@@ -1,32 +1,43 @@
 {
   "name": "backend",
   "version": "1.0.0",
-  "description": "ICA Backend with Repository Pattern",
+  "description": "ICA backend: course advisor API with Clerk auth and a pgvector RAG pipeline on Groq",
   "license": "ISC",
   "author": "",
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon index.js",
+    "dev": "nodemon --ignore .model-cache --ignore eval index.js",
     "start": "node index.js",
+    "test": "node --test \"test/**/*.test.js\"",
+    "db:setup": "node scripts/setupDb.js && drizzle-kit push",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
-    "ingest:courses": "node scripts/ingestCourses.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "db:studio": "drizzle-kit studio",
+    "seed": "node scripts/seed.js",
+    "rag:ingest": "node scripts/ingest.js",
+    "rag:eval": "node scripts/evalRag.js",
+    "setup": "npm run db:setup && npm run seed && npm run rag:ingest",
+    "db:recalc-credits": "node scripts/recalcCredits.js"
   },
   "dependencies": {
+    "@clerk/express": "^2.1.82",
+    "@huggingface/transformers": "^4.3.1",
     "@neondatabase/serverless": "^1.1.0",
-    "@pageindex/sdk": "^0.8.0",
-    "axios": "^1.15.2",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",
-    "openai": "^6.34.0",
+    "express-rate-limit": "^8.7.1",
+    "groq-sdk": "^1.6.0",
+    "helmet": "^8.3.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "drizzle-kit": "^0.31.10",
     "nodemon": "^3.1.14"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

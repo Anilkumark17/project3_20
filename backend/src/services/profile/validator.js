@@ -40,7 +40,7 @@ const validateProfile = (req, res, next) => {
 
 const validateUpdateProfile = (req, res, next) => {
   try {
-    updateProfileSchema.parse(req.body);
+    req.body = updateProfileSchema.parse(req.body);
     next();
   } catch (error) {
     return res.status(400).json({
@@ -52,7 +52,7 @@ const validateUpdateProfile = (req, res, next) => {
 
 const validateCompletedCourse = (req, res, next) => {
   try {
-    completedCourseSchema.parse(req.body);
+    req.body = completedCourseSchema.parse(req.body);
     next();
   } catch (error) {
     return res.status(400).json({

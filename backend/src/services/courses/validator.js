@@ -7,7 +7,7 @@ const courseSchema = z.object({
   difficulty: z.number().int().min(1).max(5).optional(),
   workload: z.string().optional(),
   description: z.string().optional(),
-  program: z.enum(["CSE", "PDM", "CSIS", "CASE"]).optional(),
+  program: z.enum(["CSE", "PDM", "CSIS", "CASE", "Elective"]).optional(),
   semester: z.number().int().min(1).max(8).optional(),
 });
 
@@ -18,7 +18,7 @@ const updateCourseSchema = z.object({
   difficulty: z.number().int().min(1).max(5).optional(),
   workload: z.string().optional(),
   description: z.string().optional(),
-  program: z.enum(["CSE", "PDM", "CSIS", "CASE"]).optional(),
+  program: z.enum(["CSE", "PDM", "CSIS", "CASE", "Elective"]).optional(),
   semester: z.number().int().min(1).max(8).optional(),
 });
 

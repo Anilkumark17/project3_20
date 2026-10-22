@@ -1,229 +1,103 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
+import { useQueryClient } from "@tanstack/react-query";
+import { Check, GraduationCap, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUpdateProfile } from "@/hooks/useAuth";
-import { Loader2, GraduationCap } from "lucide-react";
+import { GOALS, PROGRAMS, SEMESTERS } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
-const PROGRAMS = [
-  { value: "CSE", label: "Computer Science and Engineering (CSE)" },
-  { value: "PDM", label: "Product Design and Manufacturing (PDM)" },
-  { value: "CSIS", label: "Computer Science and Information Systems (CSIS)" },
-  { value: "CASE", label: "Computer and Systems Engineering (CASE)" },
-];
-
-const SEMESTERS = [
-  { value: 1, label: "Semester 1" },
-  { value: 2, label: "Semester 2" },
-  { value: 3, label: "Semester 3" },
-  { value: 4, label: "Semester 4" },
-  { value: 5, label: "Semester 5" },
-  { value: 6, label: "Semester 6" },
-  { value: 7, label: "Semester 7" },
-  { value: 8, label: "Semester 8" },
-];
-
-const GOALS = [
-  { value: "Placement", label: "Placement - Prepare for job opportunities" },
-  { value: "Research", label: "Research - Focus on academic research" },
-  { value: "Skills", label: "Skills - Develop technical expertise" },
-];
+function OptionCard({ selected, onClick, title, description }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={selected}
+      className={cn(
+        "relative flex w-full flex-col items-start rounded-xl border bg-card p-4 text-left transition-all hover:border-primary/40",
+        selected && "border-primary bg-brand-soft ring-3 ring-primary/15"
+      )}
+    >
+      <span className="font-medium">{title}</span>
+      {description && <span className="mt-0.5 text-sm text-muted-foreground">{description}</span>}
+      {selected && (
+        <span className="absolute top-3 right-3 grid size-5 place-items-center rounded-full bg-primary text-primary-foreground">
+          <Check className="size-3" />
+        </span>
+      )}
+    </button>
+  );
+}
 
 export default function OnboardingPage() {
-  const { user, isLoaded } = useUser();
   const router = useRouter();
-  const updateProfileMutation = useUpdateProfile();
+  const queryClient = useQueryClient();
+  const { user } = useUser();
+  const updateProfile = useUpdateProfile();
+  const [form, setForm] = useState({ program: "", semester: null, goal: "" });
 
-  const [formData, setFormData] = useState({
-    program: "",
-    semester: "",
-    goal: "",
-  });
+  const complete = form.program && form.semester && form.goal;
 
-  const [errors, setErrors] = useState({});
-
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.program) newErrors.program = "Please select your program";
-    if (!formData.semester) newErrors.semester = "Please select your semester";
-    if (!formData.goal) newErrors.goal = "Please select your goal";
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
-
+  const submit = async () => {
     try {
-      await updateProfileMutation.mutateAsync({
-        clerkId: user.id,
-        profileData: {
-          program: formData.program,
-          semester: parseInt(formData.semester),
-          goal: formData.goal,
-        },
-      });
-      router.push("/dashboard");
-    } catch (error) {
-      console.error("Profile setup error:", error);
+      await updateProfile.mutateAsync({ clerkId: user.id, profileData: form });
+      await queryClient.invalidateQueries({ queryKey: ["dashboard", user.id] });
+      toast.success("You're all set!");
+      router.replace("/dashboard");
+    } catch (err) {
+      toast.error(err.message || "Failed to save your profile");
     }
   };
 
-  if (!isLoaded) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
-        <Loader2 className="h-8 w-8 animate-spin text-black" />
-      </div>
-    );
-  }
-
   return (
-    <div className="flex min-h-screen items-center justify-center bg-white px-4 py-16">
-      <Card className="w-full max-w-2xl border-black/10">
-        <CardHeader className="space-y-4 text-center">
-          <div className="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-black">
-            <GraduationCap className="h-8 w-8 text-white" />
-          </div>
-          <CardTitle className="text-3xl font-bold text-black">
-            Complete Your Profile
-          </CardTitle>
-          <CardDescription className="text-lg font-light text-black/60">
-            Help us personalize your course recommendations
-          </CardDescription>
-        </CardHeader>
+    <div className="relative flex flex-1 items-center justify-center px-4 py-12">
+      <div className="bg-grid pointer-events-none absolute inset-0 [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_70%)]" />
+      <div className="relative w-full max-w-2xl rounded-3xl border bg-card p-6 shadow-xl sm:p-10">
+        <div className="text-center">
+          <span className="mx-auto grid size-12 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/30">
+            <GraduationCap className="size-6" />
+          </span>
+          <h1 className="mt-5 text-2xl font-semibold tracking-tight sm:text-3xl">Set up your academic profile</h1>
+          <p className="mt-2 text-muted-foreground">Three quick choices so the advisor can personalise everything.</p>
+        </div>
 
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Program Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="program" className="text-base font-medium text-black">
-                Program *
-              </Label>
-              <Select
-                value={formData.program}
-                onValueChange={(value) => {
-                  setFormData({ ...formData, program: value });
-                  setErrors({ ...errors, program: "" });
-                }}
-              >
-                <SelectTrigger
-                  id="program"
-                  className={`h-12 border-black/20 font-medium ${
-                    errors.program ? "border-red-500" : ""
-                  }`}
-                >
-                  <SelectValue placeholder="Select your program" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PROGRAMS.map((program) => (
-                    <SelectItem key={program.value} value={program.value}>
-                      {program.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.program && (
-                <p className="text-sm font-medium text-red-500">{errors.program}</p>
-              )}
+        <div className="mt-10 space-y-8">
+          <fieldset>
+            <legend className="mb-3 text-sm font-semibold">1. Your program</legend>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {PROGRAMS.map((p) => (
+                <OptionCard key={p.value} title={p.short} description={p.label} selected={form.program === p.value} onClick={() => setForm({ ...form, program: p.value })} />
+              ))}
             </div>
+          </fieldset>
 
-            {/* Semester Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="semester" className="text-base font-medium text-black">
-                Current Semester *
-              </Label>
-              <Select
-                value={formData.semester}
-                onValueChange={(value) => {
-                  setFormData({ ...formData, semester: value });
-                  setErrors({ ...errors, semester: "" });
-                }}
-              >
-                <SelectTrigger
-                  id="semester"
-                  className={`h-12 border-black/20 font-medium ${
-                    errors.semester ? "border-red-500" : ""
-                  }`}
-                >
-                  <SelectValue placeholder="Select your current semester" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SEMESTERS.map((semester) => (
-                    <SelectItem key={semester.value} value={semester.value.toString()}>
-                      {semester.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.semester && (
-                <p className="text-sm font-medium text-red-500">{errors.semester}</p>
-              )}
+          <fieldset>
+            <legend className="mb-3 text-sm font-semibold">2. Current semester</legend>
+            <div className="grid grid-cols-4 gap-3">
+              {SEMESTERS.map((s) => (
+                <OptionCard key={s.value} title={s.value} description={s.value % 2 ? "Monsoon" : "Spring"} selected={form.semester === s.value} onClick={() => setForm({ ...form, semester: s.value })} />
+              ))}
             </div>
+          </fieldset>
 
-            {/* Goal Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="goal" className="text-base font-medium text-black">
-                Academic Goal *
-              </Label>
-              <Select
-                value={formData.goal}
-                onValueChange={(value) => {
-                  setFormData({ ...formData, goal: value });
-                  setErrors({ ...errors, goal: "" });
-                }}
-              >
-                <SelectTrigger
-                  id="goal"
-                  className={`h-12 border-black/20 font-medium ${
-                    errors.goal ? "border-red-500" : ""
-                  }`}
-                >
-                  <SelectValue placeholder="Select your academic goal" />
-                </SelectTrigger>
-                <SelectContent>
-                  {GOALS.map((goal) => (
-                    <SelectItem key={goal.value} value={goal.value}>
-                      {goal.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.goal && (
-                <p className="text-sm font-medium text-red-500">{errors.goal}</p>
-              )}
+          <fieldset>
+            <legend className="mb-3 text-sm font-semibold">3. Primary goal</legend>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {GOALS.map((g) => (
+                <OptionCard key={g.value} title={g.label} description={g.description} selected={form.goal === g.value} onClick={() => setForm({ ...form, goal: g.value })} />
+              ))}
             </div>
+          </fieldset>
+        </div>
 
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              disabled={updateProfileMutation.isPending}
-              className="h-12 w-full bg-black text-base font-medium text-white hover:bg-black/90"
-            >
-              {updateProfileMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Setting up your profile...
-                </>
-              ) : (
-                "Complete Setup"
-              )}
-            </Button>
-
-            {updateProfileMutation.isError && (
-              <p className="text-center text-sm font-medium text-red-500">
-                Failed to save profile. Please try again.
-              </p>
-            )}
-          </form>
-        </CardContent>
-      </Card>
+        <Button onClick={submit} disabled={!complete || updateProfile.isPending} size="lg" className="mt-10 h-11 w-full text-base">
+          {updateProfile.isPending ? <><Loader2 className="animate-spin" /> Saving…</> : "Continue to dashboard"}
+        </Button>
+      </div>
     </div>
   );
 }

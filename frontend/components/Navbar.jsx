@@ -1,62 +1,111 @@
 "use client";
 
-import { UserButton, Show, SignInButton } from "@clerk/nextjs";
+import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
+import { GraduationCap, LayoutDashboard, BookOpen, Sparkles, MessageSquareText, UserRound, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { GraduationCap } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import ThemeToggle from "@/components/ThemeToggle";
+import { cn } from "@/lib/utils";
+
+const NAV = [
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/advisor", label: "AI Advisor", icon: MessageSquareText },
+  { href: "/courses", label: "Courses", icon: BookOpen },
+  { href: "/recommendations", label: "Recommendations", icon: Sparkles },
+  { href: "/profile", label: "Profile", icon: UserRound },
+];
+
+function Logo() {
+  return (
+    <Link href="/" className="flex items-center gap-2.5 font-semibold tracking-tight transition-opacity hover:opacity-80">
+      <span className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground shadow-sm shadow-primary/30">
+        <GraduationCap className="size-4.5" />
+      </span>
+      <span className="text-[1.05rem]">
+        ICA<span className="ml-1.5 hidden font-normal text-muted-foreground sm:inline">Course Advisor</span>
+      </span>
+    </Link>
+  );
+}
 
 export default function Navbar() {
-  return (
-    <nav className="sticky top-0 z-50 border-b border-black/10 bg-white backdrop-blur-sm">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
-          <div className="flex items-center gap-10">
-            <Link href="/" className="flex items-center gap-2.5 font-semibold text-black transition-opacity hover:opacity-70">
-              <div className="rounded-xl bg-black p-2">
-                <GraduationCap className="h-5 w-5 text-white" />
-              </div>
-              <span className="text-xl tracking-tight">ICA</span>
-            </Link>
-            <Show when="signed-in">
-              <div className="hidden gap-1 md:flex">
-                <Link href="/dashboard">
-                  <Button variant="ghost" size="sm" className="font-medium text-black/70 hover:bg-black/5 hover:text-black">
-                    Dashboard
-                  </Button>
-                </Link>
-                <Link href="/courses">
-                  <Button variant="ghost" size="sm" className="font-medium text-black/70 hover:bg-black/5 hover:text-black">
-                    Courses
-                  </Button>
-                </Link>
-                <Link href="/recommendations">
-                  <Button variant="ghost" size="sm" className="font-medium text-black/70 hover:bg-black/5 hover:text-black">
-                    Recommendations
-                  </Button>
-                </Link>
-                <Link href="/profile">
-                  <Button variant="ghost" size="sm" className="font-medium text-black/70 hover:bg-black/5 hover:text-black">
-                    Profile
-                  </Button>
-                </Link>
-              </div>
-            </Show>
-          </div>
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const isActive = (href) => pathname === href || pathname.startsWith(`${href}/`);
 
-          <div className="flex items-center gap-4">
-            <Show when="signed-out">
-              <SignInButton mode="modal">
-                <Button size="sm" className="bg-black font-medium text-white hover:bg-black/90">
-                  Sign In
+  if (pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up")) return null;
+
+  return (
+    <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-lg supports-[backdrop-filter]:bg-background/65">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center gap-8">
+          <Logo />
+          <Show when="signed-in">
+            <nav className="hidden items-center gap-1 md:flex">
+              {NAV.map(({ href, label }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  className={cn(
+                    "relative rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground",
+                    isActive(href) && "text-foreground after:absolute after:inset-x-3 after:-bottom-[13px] after:h-0.5 after:rounded-full after:bg-primary"
+                  )}
+                >
+                  {label}
+                </Link>
+              ))}
+            </nav>
+          </Show>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <Show when="signed-out">
+            <SignInButton mode="modal">
+              <Button variant="ghost" size="lg">Sign in</Button>
+            </SignInButton>
+            <SignUpButton mode="modal">
+              <Button size="lg" className="hidden sm:inline-flex">Get started</Button>
+            </SignUpButton>
+          </Show>
+          <Show when="signed-in">
+            <UserButton appearance={{ elements: { avatarBox: "size-8" } }} />
+            <Sheet open={open} onOpenChange={setOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon-lg" className="md:hidden" aria-label="Open menu">
+                  <Menu />
                 </Button>
-              </SignInButton>
-            </Show>
-            <Show when="signed-in">
-              <UserButton afterSignOutUrl="/" />
-            </Show>
-          </div>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72 p-0">
+                <SheetHeader className="border-b p-4">
+                  <SheetTitle asChild>
+                    <div><Logo /></div>
+                  </SheetTitle>
+                </SheetHeader>
+                <nav className="flex flex-col gap-1 p-3">
+                  {NAV.map(({ href, label, icon: Icon }) => (
+                    <Link
+                      key={href}
+                      href={href}
+                      onClick={() => setOpen(false)}
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                        isActive(href) && "bg-accent text-accent-foreground"
+                      )}
+                    >
+                      <Icon className="size-4" />
+                      {label}
+                    </Link>
+                  ))}
+                </nav>
+              </SheetContent>
+            </Sheet>
+          </Show>
         </div>
       </div>
-    </nav>
+    </header>
   );
 }

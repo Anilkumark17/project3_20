@@ -1,218 +1,210 @@
 "use client";
 
-import { useUser } from "@clerk/nextjs";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { useSyncUser, useUser as useUserData } from "@/hooks/useAuth";
-import { DashboardSkeleton } from "@/components/DashboardSkeleton";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useUser } from "@clerk/nextjs";
+import { formatDistanceToNowStrict } from "date-fns";
+import {
+  ArrowRight, ArrowUp, BookOpen, CheckCircle2, GraduationCap, MessageSquareText, Sparkles, Target, TrendingUp, AlertCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { GraduationCap, BookOpen, Sparkles, CheckCircle2, AlertCircle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PageContainer, StatCard } from "@/components/PageHeader";
+import DifficultyBadge from "@/components/courses/DifficultyBadge";
+import { useDashboard } from "@/hooks/useDashboard";
+import { programLabel, SEASONS } from "@/lib/constants";
+
+function DashboardSkeleton() {
+  return (
+    <PageContainer>
+      <Skeleton className="h-10 w-80" />
+      <Skeleton className="mt-3 h-5 w-96" />
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => <Skeleton key={i} className="h-36 rounded-2xl" />)}
+      </div>
+      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        <Skeleton className="h-80 rounded-2xl lg:col-span-2" />
+        <Skeleton className="h-80 rounded-2xl" />
+      </div>
+    </PageContainer>
+  );
+}
+
+function QuickAsk() {
+  const router = useRouter();
+  const [q, setQ] = useState("");
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (q.trim()) router.push(`/advisor?q=${encodeURIComponent(q.trim())}`);
+      }}
+      className="flex items-center gap-2 rounded-xl border bg-background p-1.5 pl-4 focus-within:border-primary/40 focus-within:ring-3 focus-within:ring-primary/10"
+    >
+      <input
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="e.g. Which spring electives suit research in NLP?"
+        className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+        aria-label="Ask the AI advisor"
+      />
+      <Button type="submit" size="icon-lg" disabled={!q.trim()} aria-label="Ask">
+        <ArrowUp />
+      </Button>
+    </form>
+  );
+}
 
 export default function DashboardPage() {
-  const { user, isLoaded, isSignedIn } = useUser();
   const router = useRouter();
-  const syncUserMutation = useSyncUser();
-  const { data: userData, isLoading, error, refetch } = useUserData(user?.id);
+  const { user, isLoaded } = useUser();
+  const { data, isLoading, error, refetch } = useDashboard(user?.id);
+
+  const profile = data?.profile;
+  const needsOnboarding = data && !(profile?.program && profile?.semester && profile?.goal);
 
   useEffect(() => {
-    if (isLoaded && !isSignedIn) {
-      router.push("/sign-in");
-    }
-  }, [isLoaded, isSignedIn, router]);
+    if (needsOnboarding) router.replace("/onboarding");
+  }, [needsOnboarding, router]);
 
-  useEffect(() => {
-    const syncUser = async () => {
-      if (!user || syncUserMutation.isPending) return;
-
-      const syncData = {
-        clerkId: user.id,
-        email: user.primaryEmailAddress?.emailAddress || "",
-        name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.username || "User",
-      };
-
-      try {
-        await syncUserMutation.mutateAsync(syncData);
-      } catch (err) {
-        console.error("Sync error:", err);
-      }
-    };
-
-    if (user && isSignedIn) {
-      syncUser();
-    }
-  }, [user, isSignedIn]);
-
-  // Check if profile is complete, redirect to onboarding if not
-  useEffect(() => {
-    if (userData?.data?.profile) {
-      const profile = userData.data.profile;
-      const isProfileComplete = profile.program && profile.semester && profile.goal;
-      
-      if (!isProfileComplete) {
-        router.push("/onboarding");
-      }
-    }
-  }, [userData, router]);
-
-  if (!isLoaded || isLoading) {
-    return <DashboardSkeleton />;
-  }
-
-  if (!isSignedIn) {
-    return null;
-  }
+  if (!isLoaded || isLoading || needsOnboarding) return <DashboardSkeleton />;
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-6">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-red-600">
-              <AlertCircle className="h-5 w-5" />
-              Error Loading Dashboard
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">{error.message}</p>
-            <Button onClick={() => refetch()} className="w-full">
-              Try Again
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <PageContainer className="flex flex-1 items-center justify-center">
+        <div className="max-w-md rounded-2xl border bg-card p-8 text-center">
+          <AlertCircle className="mx-auto size-10 text-destructive" />
+          <h2 className="mt-4 text-lg font-semibold">We couldn&apos;t load your dashboard</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{error.message}</p>
+          <Button onClick={() => refetch()} className="mt-6">Try again</Button>
+        </div>
+      </PageContainer>
     );
   }
 
-  const profile = userData?.data?.profile;
-  const dbUser = userData?.data?.user;
+  const { stats, recentCourses, recommendations, conversations } = data;
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="mx-auto max-w-7xl p-6">
-        <div className="mb-12">
-          <h1 className="text-5xl font-bold tracking-tight text-black">
-            Welcome back, {user?.firstName || "Student"}!
-          </h1>
-          <p className="mt-3 text-xl font-light text-black/60">
-            Here&apos;s your academic overview and personalized recommendations
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <Card className="border-black/10 transition-all hover:border-black/20 hover:shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <div className="rounded-xl bg-black p-2.5">
-                  <GraduationCap className="h-5 w-5 text-white" />
-                </div>
-                <span className="font-semibold text-black">Profile Information</span>
-              </CardTitle>
-              <CardDescription className="font-light text-black/60">Your account details</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <p className="text-sm font-medium text-black/50">Name</p>
-                <p className="text-base font-semibold text-black">
-                  {user?.firstName} {user?.lastName}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-black/50">Email</p>
-                <p className="text-base font-semibold text-black truncate">
-                  {user?.primaryEmailAddress?.emailAddress}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-black/50">User ID</p>
-                <p className="text-xs font-mono text-black/60">{dbUser?.id}</p>
-              </div>
-              {dbUser && (
-                <Badge variant="outline" className="gap-1.5 border-black/20 bg-black/5 font-medium text-black">
-                  <CheckCircle2 className="h-3 w-3" />
-                  Synced with backend
-                </Badge>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="border-black/10 transition-all hover:border-black/20 hover:shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <div className="rounded-xl bg-black p-2.5">
-                  <BookOpen className="h-5 w-5 text-white" />
-                </div>
-                <span className="font-semibold text-black">Academic Progress</span>
-              </CardTitle>
-              <CardDescription className="font-light text-black/60">Track your journey</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <p className="text-sm font-medium text-black/50">Program</p>
-                <p className="text-base font-semibold text-black">
-                  {profile?.program || <span className="text-black/40">Not set</span>}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-black/50">Current Semester</p>
-                <p className="text-base font-semibold text-black">
-                  {profile?.semester || <span className="text-black/40">Not set</span>}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-black/50">Credits Completed</p>
-                <p className="text-3xl font-bold text-black">
-                  {profile?.creditsCompleted || 0}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-black/50">Goal</p>
-                <p className="text-base font-semibold text-black">
-                  {profile?.goal || <span className="text-black/40">Not set</span>}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-black/10 transition-all hover:border-black/20 hover:shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <div className="rounded-xl bg-black p-2.5">
-                  <Sparkles className="h-5 w-5 text-white" />
-                </div>
-                <span className="font-semibold text-black">Quick Actions</span>
-              </CardTitle>
-              <CardDescription className="font-light text-black/60">Get started quickly</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button className="w-full justify-start gap-2 bg-black font-medium text-white hover:bg-black/90" size="lg">
-                📝 Setup Profile
-              </Button>
-              <Button variant="outline" className="w-full justify-start gap-2 border-black/20 font-medium hover:bg-black/5" size="lg">
-                📚 Browse Courses
-              </Button>
-              <Button variant="outline" className="w-full justify-start gap-2 border-black/20 font-medium hover:bg-black/5" size="lg">
-                ✨ Get Recommendations
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Alert className="mt-8 border-black/10 bg-black/5">
-          <Sparkles className="h-4 w-4 text-black" />
-          <AlertDescription className="text-black">
-            <p className="font-semibold mb-3 text-lg">🎯 Next Steps</p>
-            <ul className="space-y-2 font-light">
-              <li>• Complete your profile to get personalized recommendations</li>
-              <li>• Add courses you&apos;ve already completed</li>
-              <li>• Explore the course catalog</li>
-              <li>• Get AI-powered semester planning suggestions</li>
-            </ul>
-          </AlertDescription>
-        </Alert>
+    <PageContainer>
+      <div className="mb-8 flex flex-col gap-2">
+        <p className="text-sm text-muted-foreground">
+          {programLabel(profile.program)} · Semester {profile.semester}
+        </p>
+        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+          Welcome back, {user?.firstName || "there"}
+        </h1>
       </div>
-    </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard icon={GraduationCap} label="Credits earned" value={stats.creditsCompleted} hint={`of ${stats.creditsRequired} required`} accent>
+          <Progress value={stats.progress * 100} className="mt-4 h-1.5" />
+        </StatCard>
+        <StatCard icon={CheckCircle2} label="Courses completed" value={stats.coursesCompleted} hint={`${stats.catalogSize} in the catalog`} />
+        <StatCard
+          icon={TrendingUp}
+          label="Average difficulty"
+          value={stats.averageDifficulty ? `${stats.averageDifficulty.toFixed(1)}/5` : "–"}
+          hint={stats.averageDifficulty ? "across completed courses" : "add courses to see this"}
+        />
+        <StatCard icon={Target} label="Goal" value={profile.goal} hint="Recommendations are tuned to this" />
+      </div>
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <div className="rounded-2xl border bg-gradient-to-br from-brand-soft via-card to-card p-6">
+            <div className="flex items-center gap-3">
+              <span className="grid size-10 place-items-center rounded-xl bg-primary text-primary-foreground shadow-md shadow-primary/30">
+                <MessageSquareText className="size-5" />
+              </span>
+              <div>
+                <h2 className="font-semibold">Ask the AI advisor</h2>
+                <p className="text-sm text-muted-foreground">Cited answers from the official syllabi</p>
+              </div>
+            </div>
+            <div className="mt-5"><QuickAsk /></div>
+            {conversations.length > 0 && (
+              <div className="mt-5 flex flex-wrap gap-2">
+                {conversations.slice(0, 3).map((c) => (
+                  <Link key={c.id} href={`/advisor?c=${c.id}`} className="max-w-full truncate rounded-full border bg-card px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground">
+                    {c.title}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-2xl border bg-card">
+            <div className="flex items-center justify-between border-b px-6 py-4">
+              <div className="flex items-center gap-2">
+                <Sparkles className="size-4 text-primary" />
+                <h2 className="font-semibold">Top picks for you</h2>
+              </div>
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/recommendations">View all <ArrowRight /></Link>
+              </Button>
+            </div>
+            {recommendations.length === 0 ? (
+              <div className="px-6 py-10 text-center">
+                <p className="text-sm text-muted-foreground">No recommendations yet. Generate a personalised shortlist in seconds.</p>
+                <Button asChild className="mt-4"><Link href="/recommendations"><Sparkles /> Generate recommendations</Link></Button>
+              </div>
+            ) : (
+              <ul className="divide-y">
+                {recommendations.map((r) => (
+                  <li key={r.id} className="flex gap-4 px-6 py-4">
+                    <span className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg bg-primary/10 text-sm font-semibold text-primary">{r.priority}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium">{r.title}</p>
+                        <span className="font-mono text-xs text-muted-foreground">{r.code}</span>
+                        <DifficultyBadge level={r.difficulty} />
+                      </div>
+                      <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{r.reason}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border bg-card">
+          <div className="flex items-center justify-between border-b px-6 py-4">
+            <div className="flex items-center gap-2">
+              <BookOpen className="size-4 text-primary" />
+              <h2 className="font-semibold">Recently completed</h2>
+            </div>
+            <Button asChild variant="ghost" size="sm"><Link href="/profile">Manage</Link></Button>
+          </div>
+          {recentCourses.length === 0 ? (
+            <div className="px-6 py-10 text-center">
+              <p className="text-sm text-muted-foreground">Log the courses you have finished to unlock better recommendations.</p>
+              <Button asChild variant="outline" className="mt-4"><Link href="/profile">Add completed courses</Link></Button>
+            </div>
+          ) : (
+            <ul className="divide-y">
+              {recentCourses.map((c) => (
+                <li key={c.id} className="flex items-center justify-between gap-3 px-6 py-3.5">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{c.courseTitle}</p>
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-mono">{c.courseCode}</span> · {c.courseCredits} cr
+                      {c.completedAt && ` · ${formatDistanceToNowStrict(new Date(c.completedAt), { addSuffix: true })}`}
+                    </p>
+                  </div>
+                  {c.grade && <Badge variant="secondary" className="font-mono">{c.grade}</Badge>}
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="border-t px-6 py-4 text-xs text-muted-foreground">
+            Seasons: {SEASONS[1]} (odd) and {SEASONS[2]} (even) semesters
+          </div>
+        </div>
+      </div>
+    </PageContainer>
   );
 }

@@ -2,6 +2,10 @@ const express = require("express");
 const router = express.Router();
 const courseController = require("./controller");
 const { validateCourse, validateUpdateCourse } = require("./validator");
+const { requireAuth, requireAdmin } = require("../../middleware/auth");
+
+// Catalog reads are public; writes are restricted to admins.
+const adminOnly = [requireAuth, requireAdmin];
 
 // Get all courses
 router.get("/", courseController.getAllCourses);
@@ -25,12 +29,12 @@ router.get("/:id", courseController.getCourseById);
 router.get("/code/:code", courseController.getCourseByCode);
 
 // Create new course
-router.post("/", validateCourse, courseController.createCourse);
+router.post("/", adminOnly, validateCourse, courseController.createCourse);
 
 // Update course
-router.put("/:id", validateUpdateCourse, courseController.updateCourse);
+router.put("/:id", adminOnly, validateUpdateCourse, courseController.updateCourse);
 
 // Delete course
-router.delete("/:id", courseController.deleteCourse);
+router.delete("/:id", adminOnly, courseController.deleteCourse);
 
 module.exports = router;

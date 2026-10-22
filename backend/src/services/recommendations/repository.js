@@ -25,13 +25,11 @@ const findByUserId = async (userId) => {
     .orderBy(recommendations.priority);
 };
 
-const deleteByUserId = async (userId) => {
-  await db.delete(recommendations).where(eq(recommendations.userId, userId));
+/** Atomically swap a user's recommendation set. */
+const replaceForUser = async (userId, rows) => {
+  const statements = [db.delete(recommendations).where(eq(recommendations.userId, userId))];
+  if (rows.length) statements.push(db.insert(recommendations).values(rows));
+  await db.batch(statements);
 };
 
-const saveAll = async (rows) => {
-  if (!rows.length) return [];
-  return db.insert(recommendations).values(rows).returning();
-};
-
-module.exports = { findByUserId, deleteByUserId, saveAll };
+module.exports = { findByUserId, replaceForUser };

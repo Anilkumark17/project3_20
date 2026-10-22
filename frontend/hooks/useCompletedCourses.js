@@ -31,6 +31,8 @@ export const useAddCompletedCourse = () => {
       queryClient.invalidateQueries({ queryKey: ["completedCourses", variables.clerkId] });
       queryClient.invalidateQueries({ queryKey: ["user", variables.clerkId] });
       queryClient.invalidateQueries({ queryKey: ["recommendations", variables.clerkId] });
+      queryClient.invalidateQueries({ queryKey: ["profile", variables.clerkId] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", variables.clerkId] });
     },
   });
 };
@@ -44,20 +46,12 @@ export const useRemoveCompletedCourse = () => {
       const { data } = await axios.delete(`/profile/${clerkId}/courses/${courseId}`);
       return data;
     },
-    onSuccess: (data, variables) => {
-      // Invalidate and refetch queries
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["completedCourses", variables.clerkId] });
       queryClient.invalidateQueries({ queryKey: ["user", variables.clerkId] });
       queryClient.invalidateQueries({ queryKey: ["recommendations", variables.clerkId] });
-      
-      console.log('Course removed successfully:', data);
-    },
-    onError: (error, variables) => {
-      console.error('Failed to remove course:', error);
-      console.error('Variables:', variables);
-      
-      // Rethrow error so component can handle it
-      throw error;
+      queryClient.invalidateQueries({ queryKey: ["profile", variables.clerkId] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", variables.clerkId] });
     },
   });
 };

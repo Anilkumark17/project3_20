@@ -3,7 +3,9 @@ const authService = require("./service");
 class AuthController {
   async syncUser(req, res) {
     try {
-      const { clerkId, email, name } = req.body;
+      const { email, name } = req.body;
+      // Identity comes from the verified session token, never from the request body.
+      const clerkId = req.userId;
 
       const user = await authService.syncUserWithClerk({
         id: clerkId,

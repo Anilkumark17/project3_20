@@ -1,153 +1,147 @@
 "use client";
 
+import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { formatDistanceToNowStrict } from "date-fns";
+import { AlertCircle, MessageSquareText, RefreshCw, Search, Sparkles, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Loader2, Sparkles, RefreshCw, BookOpen } from "lucide-react";
-import { useRecommendations, useRefreshRecommendations } from "@/hooks/useRecommendations";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import { PageContainer, PageHeader } from "@/components/PageHeader";
+import DifficultyBadge from "@/components/courses/DifficultyBadge";
+import { useRecommendations } from "@/hooks/useRecommendations";
+import { useStreamingRecommendations } from "@/hooks/useStreamingRecommendations";
+import { SEASONS } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
-export default function RecommendationsPage() {
-  const { isLoaded, isSignedIn, user } = useUser();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (isLoaded && !isSignedIn) router.push("/sign-in");
-  }, [isLoaded, isSignedIn, router]);
-
-  const clerkId = user?.id;
-  const { data, isLoading, error } = useRecommendations(clerkId);
-  const { mutate: refresh, isPending: isRefreshing } = useRefreshRecommendations();
-
-  if (!isLoaded || isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-white">
-        <Loader2 className="h-8 w-8 animate-spin text-black" />
-      </div>
-    );
-  }
-
-  if (!isSignedIn) return null;
-
-  const recommendations = data?.recommendations || [];
-  const generatedAt = data?.generatedAt ? new Date(data.generatedAt).toLocaleString() : null;
-
+function RecommendationCard({ rec, rank, provisional }) {
   return (
-    <div className="min-h-screen bg-white">
-      <div className="mx-auto max-w-7xl p-6">
-        {/* Header */}
-        <div className="mb-8 flex items-start justify-between">
-          <div>
-            <h1 className="text-4xl font-bold tracking-tight text-black">Recommendations</h1>
-            <p className="mt-2 text-lg font-light text-black/60">
-              AI-powered course suggestions based on your profile and goals
-            </p>
-            {generatedAt && (
-              <p className="mt-1 text-sm text-black/40">Last generated: {generatedAt}</p>
-            )}
-          </div>
-          <Button
-            onClick={() => refresh(clerkId)}
-            disabled={isRefreshing}
-            variant="outline"
-            className="border-black/20 font-medium hover:bg-black/5"
-          >
-            {isRefreshing ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
-            )}
-            {isRefreshing ? "Generating..." : "Refresh"}
-          </Button>
+    <article
+      className={cn(
+        "flex flex-col rounded-2xl border bg-card p-5 shadow-xs transition-all",
+        provisional ? "opacity-70" : "hover:border-primary/30 hover:shadow-md",
+        rank === 1 && !provisional && "border-primary/30 bg-gradient-to-br from-brand-soft to-card"
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <span className={cn("grid size-9 shrink-0 place-items-center rounded-xl text-sm font-semibold", rank === 1 && !provisional ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary")}>
+          #{rank}
+        </span>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-semibold leading-snug">{rec.title}</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            <span className="font-mono">{rec.code}</span> · {rec.credits} credits{rec.semester ? ` · ${SEASONS[rec.semester]}` : ""}
+          </p>
         </div>
-
-        {/* Content */}
-        {error ? (
-          <Card className="border-black/10">
-            <CardContent className="py-12 text-center">
-              <p className="font-medium text-black/60">Failed to load recommendations. Please try again.</p>
-            </CardContent>
-          </Card>
-        ) : recommendations.length === 0 ? (
-          <Card className="border-black/10">
-            <CardContent className="py-12 text-center">
-              <Sparkles className="mx-auto mb-4 h-12 w-12 text-black/20" />
-              <p className="text-lg font-semibold text-black">No recommendations yet</p>
-              <p className="mt-1 font-light text-black/60">
-                Complete your profile with your program and goals, then click Refresh.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {recommendations.map((rec, idx) => (
-              <Card
-                key={rec.id}
-                className="border-black/10 transition-all hover:border-black/20 hover:shadow-lg"
-              >
-                <CardHeader>
-                  <div className="mb-2 flex items-start justify-between">
-                    <Badge variant="outline" className="border-black/20 bg-black/5 font-mono font-medium text-black">
-                      {rec.code}
-                    </Badge>
-                    <div className="flex gap-2">
-                      <Badge variant="outline" className="border-black/20 font-medium text-black">
-                        #{idx + 1}
-                      </Badge>
-                      <Badge variant="outline" className="border-black/20 font-medium text-black">
-                        {rec.credits} {rec.credits === 1 ? "Credit" : "Credits"}
-                      </Badge>
-                    </div>
-                  </div>
-                  <CardTitle className="text-xl font-semibold text-black">{rec.title}</CardTitle>
-                  {rec.description && (
-                    <CardDescription className="mt-1 line-clamp-2 font-light text-black/60">
-                      {rec.description}
-                    </CardDescription>
-                  )}
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {rec.reason && (
-                    <div className="rounded-lg bg-black/5 p-3">
-                      <div className="mb-1 flex items-center gap-1.5">
-                        <Sparkles className="h-3.5 w-3.5 text-black/50" />
-                        <span className="text-xs font-semibold uppercase tracking-wide text-black/50">
-                          Why this course
-                        </span>
-                      </div>
-                      <p className="text-sm font-light text-black/80">{rec.reason}</p>
-                    </div>
-                  )}
-                  <div className="space-y-1.5">
-                    {rec.program && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-black/50">Program</span>
-                        <span className="text-sm font-semibold text-black">{rec.program}</span>
-                      </div>
-                    )}
-                    {rec.semester && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-black/50">Semester</span>
-                        <span className="text-sm font-semibold text-black">
-                          {rec.semester === 1 ? "Monsoon" : "Spring"}
-                        </span>
-                      </div>
-                    )}
-                    {rec.difficulty && (
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-black/50">Difficulty</span>
-                        <span className="text-sm font-semibold text-black">{rec.difficulty}/5</span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+        {typeof rec.score === "number" && !provisional && (
+          <Badge variant="outline" className="shrink-0 tabular-nums">{Math.round(rec.score * 100)}% match</Badge>
         )}
       </div>
-    </div>
+
+      {provisional ? (
+        <div className="mt-4 space-y-2">
+          <Skeleton className="h-3.5 w-full" />
+          <Skeleton className="h-3.5 w-4/5" />
+        </div>
+      ) : (
+        rec.reason && (
+          <div className="mt-4 rounded-xl bg-muted/60 p-3.5">
+            <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+              <Sparkles className="size-3.5 text-primary" /> Why this course
+            </p>
+            <p className="text-sm leading-relaxed">{rec.reason}</p>
+          </div>
+        )
+      )}
+
+      <div className="mt-auto flex items-center justify-between gap-2 pt-4">
+        <div className="flex flex-wrap gap-2">
+          {rec.program && <Badge variant="outline">{rec.program}</Badge>}
+          <DifficultyBadge level={rec.difficulty} />
+        </div>
+        {!provisional && (
+          <Button asChild variant="ghost" size="sm">
+            <Link href={`/advisor?q=${encodeURIComponent(`Tell me about ${rec.title} (${rec.code}) and whether it suits my goal`)}`}>
+              <MessageSquareText /> Ask
+            </Link>
+          </Button>
+        )}
+      </div>
+    </article>
+  );
+}
+
+export default function RecommendationsPage() {
+  const { user } = useUser();
+  const clerkId = user?.id;
+  const { data, isLoading } = useRecommendations(clerkId);
+  const stream = useStreamingRecommendations(clerkId);
+
+  const saved = data?.recommendations || [];
+  const showStream = stream.phase !== "idle";
+  const list = stream.phase === "complete" ? stream.recommendations : showStream ? stream.candidates : saved;
+  const provisional = showStream && stream.phase !== "complete";
+  const generatedAt = stream.phase === "complete" ? new Date() : data?.generatedAt ? new Date(data.generatedAt) : null;
+
+  return (
+    <PageContainer>
+      <PageHeader
+        eyebrow="Personalised"
+        title="Recommendations"
+        description="Courses retrieved from the syllabi for your goal, then ranked and explained by AI. Completed courses are excluded."
+        actions={
+          <Button onClick={stream.start} disabled={stream.isRunning || !clerkId} size="lg">
+            {stream.isRunning ? <RefreshCw className="animate-spin" /> : saved.length ? <RefreshCw /> : <Wand2 />}
+            {stream.isRunning ? "Generating…" : saved.length ? "Regenerate" : "Generate"}
+          </Button>
+        }
+      />
+
+      {stream.isRunning && (
+        <div className="mb-6 rounded-2xl border bg-card p-5">
+          <div className="mb-3 flex items-center gap-3 text-sm">
+            {stream.phase === "retrieval" ? <Search className="size-4 text-primary" /> : <Sparkles className="size-4 animate-pulse text-primary" />}
+            <span className="font-medium">{stream.message}</span>
+          </div>
+          <Progress value={stream.progress} className="h-1.5" />
+        </div>
+      )}
+
+      {stream.phase === "error" && (
+        <div className="mb-6 flex items-center gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          <AlertCircle className="size-4" /> {stream.error}
+          <Button variant="outline" size="sm" className="ml-auto" onClick={stream.start}>Retry</Button>
+        </div>
+      )}
+
+      {generatedAt && !stream.isRunning && (
+        <p className="mb-4 text-sm text-muted-foreground">Generated {formatDistanceToNowStrict(generatedAt, { addSuffix: true })}</p>
+      )}
+
+      {isLoading ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-64 rounded-2xl" />)}
+        </div>
+      ) : list.length === 0 && !stream.isRunning ? (
+        <div className="relative overflow-hidden rounded-3xl border border-dashed px-6 py-20 text-center">
+          <div className="bg-grid absolute inset-0 opacity-50" />
+          <div className="relative">
+            <span className="mx-auto grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary"><Wand2 className="size-6" /></span>
+            <h2 className="mt-5 text-xl font-semibold">Get your personalised shortlist</h2>
+            <p className="mx-auto mt-2 max-w-md text-muted-foreground">
+              We search every syllabus for courses matching your goal and history, then explain each pick.
+            </p>
+            <Button onClick={stream.start} size="lg" className="mt-6" disabled={!clerkId}><Sparkles /> Generate recommendations</Button>
+          </div>
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {list.map((rec, i) => (
+            <RecommendationCard key={`${rec.code}-${i}`} rec={rec} rank={rec.priority || i + 1} provisional={provisional} />
+          ))}
+        </div>
+      )}
+    </PageContainer>
   );
 }

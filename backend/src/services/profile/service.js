@@ -1,6 +1,9 @@
 const profileRepository = require("./repository");
 const completedCoursesRepository = require("../courses/repositories/completed");
 const userRepository = require("../auth/repository");
+const courseCache = require("../../config/courseCache");
+
+const EDITABLE_FIELDS = new Set(["program", "semester", "goal"]);
 
 class ProfileService {
   async getProfileByClerkId(clerkId) {
@@ -19,12 +22,12 @@ class ProfileService {
       throw new Error("User not found");
     }
 
+    // Credits are derived from completed courses; editing the profile must not reset them.
     const data = {
       userId: user.id,
       program: profileData.program,
       semester: profileData.semester,
       goal: profileData.goal,
-      creditsCompleted: profileData.creditsCompleted || 0,
       updatedAt: new Date(),
     };
 
@@ -36,6 +39,10 @@ class ProfileService {
     const user = await userRepository.findByClerkId(clerkId);
     if (!user) {
       throw new Error("User not found");
+    }
+
+    if (!EDITABLE_FIELDS.has(field)) {
+      throw new Error(`Field "${field}" cannot be updated`);
     }
 
     const updateData = {
@@ -77,16 +84,7 @@ class ProfileService {
     };
 
     const completedCourse = await completedCoursesRepository.create(data);
-
-    // Update credits completed in profile
-    const profile = await profileRepository.findByUserId(user.id);
-    if (profile && courseData.credits) {
-      const newCredits = (profile.creditsCompleted || 0) + courseData.credits;
-      await profileRepository.update(user.id, {
-        creditsCompleted: newCredits,
-        updatedAt: new Date(),
-      });
-    }
+    await this.recalculateCredits(user.id);
 
     return completedCourse;
   }
@@ -107,18 +105,18 @@ class ProfileService {
     }
 
     await completedCoursesRepository.delete(completedCourseId);
-
-    // Update credits completed in profile
-    const profile = await profileRepository.findByUserId(user.id);
-    if (profile && completedCourse.courseCredits) {
-      const newCredits = Math.max(0, (profile.creditsCompleted || 0) - completedCourse.courseCredits);
-      await profileRepository.update(user.id, {
-        creditsCompleted: newCredits,
-        updatedAt: new Date(),
-      });
-    }
+    await this.recalculateCredits(user.id);
 
     return true;
+  }
+
+  /** Credits = sum of credits of all completed courses (source of truth, never drifts). */
+  async recalculateCredits(userId) {
+    const profile = await profileRepository.findByUserId(userId);
+    if (!profile) return;
+    const completed = await completedCoursesRepository.findByUserId(userId);
+    const total = completed.reduce((sum, c) => sum + (c.courseCredits ?? courseCache.getById(c.courseId)?.credits ?? 0), 0);
+    await profileRepository.update(userId, { creditsCompleted: total, updatedAt: new Date() });
   }
 
   async getFullProfile(clerkId) {
